@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const express = require("express");
+const path = require("path");
 const {
   getPolicyGovernanceSummary,
   getDocumentCategorySummary,
@@ -110,6 +111,16 @@ app.get("/api/documentation/:category", async (req, res) => {
       error: "Unable to retrieve documentation.",
     });
   }
+});
+
+// Serve the React production build
+const frontendPath = path.join(__dirname, "frontend", "dist");
+
+app.use(express.static(frontendPath));
+
+// React SPA fallback
+app.get("/{*splat}", (req, res) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
 });
 
 app.listen(PORT, () => {

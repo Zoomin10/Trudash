@@ -5,6 +5,7 @@
   "main": "index.js",
 "scripts": {
   "start": "node server.js",
+  "build": "npm --prefix frontend install && npm --prefix frontend run build",
   "test:sharepoint": "node graph-test.js"
 },
   "keywords": [],
