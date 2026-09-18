@@ -51,7 +51,7 @@ const [documentationData, setDocumentationData] = useState({});
   const [error, setError] = useState(null);
 const [currentSection, setCurrentSection] = useState("overview");
 const [currentTab, setCurrentTab] = useState("policies");
-
+const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
 useEffect(() => {
   if (currentSection !== "documentation") {
@@ -100,7 +100,15 @@ useEffect(() => {
 
     {/* SIDEBAR */}
 
-    <aside className="sidebar">
+ <aside className={`sidebar ${mobileMenuOpen ? "mobile-open" : ""}`}>
+
+  <button
+    className="mobile-menu-close"
+    onClick={() => setMobileMenuOpen(false)}
+    aria-label="Close navigation menu"
+  >
+    ×
+  </button>
 
       <div className="brand">
         <img
@@ -218,33 +226,38 @@ useEffect(() => {
 
     </aside>
 
+{mobileMenuOpen && (
+  <button
+    className="mobile-menu-overlay"
+    onClick={() => setMobileMenuOpen(false)}
+    aria-label="Close navigation menu"
+  />
+)}
 
     {/* MAIN AREA */}
 
     <div className="main-area">
 
-      <header className="topbar">
+     <header className="topbar">
 
-       <div className="topbar">
+  <button
+    className="mobile-menu-button"
+    onClick={() => setMobileMenuOpen(true)}
+    aria-label="Open navigation menu"
+    aria-expanded={mobileMenuOpen}
+  >
+    ☰
+  </button>
 
   <div className="topbar-identity">
-
     <img
       src="/images/wwfclogo.png"
       alt="Wroughton & Wichelstowe FC"
       className="topbar-logo"
     />
-
-
-
   </div>
 
-  
-
-</div>
-
-      </header>
-
+</header>
 
       <main className="dashboard-content">
 
