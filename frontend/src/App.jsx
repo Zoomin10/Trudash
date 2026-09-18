@@ -251,7 +251,7 @@ useEffect(() => {
 
   <div className="topbar-identity">
     <img
-      src="/images/wwfclogo.png"
+      src="/images/wwfclogonew.png"
       alt="Wroughton & Wichelstowe FC"
       className="topbar-logo"
     />
