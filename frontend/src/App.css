@@ -131,6 +131,7 @@ body {
 .policy-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .policy-table th {
@@ -148,6 +149,44 @@ body {
   padding: 15px 18px;
   border-bottom: 1px solid #f1f5f9;
   font-size: 14px;
+}
+/* Controlled column widths */
+
+.policy-table th:nth-child(1),
+.policy-table td:nth-child(1) {
+  width: 38%;
+}
+
+.policy-table th:nth-child(2),
+.policy-table td:nth-child(2) {
+  width: 8%;
+}
+
+.policy-table th:nth-child(3),
+.policy-table td:nth-child(3) {
+  width: 13%;
+}
+
+.policy-table th:nth-child(4),
+.policy-table td:nth-child(4) {
+  width: 13%;
+}
+
+.policy-table th:nth-child(5),
+.policy-table td:nth-child(5) {
+  width: 12%;
+   white-space: nowrap;
+}
+
+.policy-table th:nth-child(6),
+.policy-table td:nth-child(6) {
+  width: 16%;
+}
+
+/* Allow long document names to wrap */
+.policy-table td:first-child a {
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .policy-table tbody tr:hover {
