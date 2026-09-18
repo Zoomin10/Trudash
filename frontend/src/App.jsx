@@ -129,7 +129,10 @@ useEffect(() => {
           className={`nav-item ${
             currentSection === "overview" ? "active" : ""
           }`}
-          onClick={() => setCurrentSection("overview")}
+         onClick={() => {
+  setCurrentSection("overview");
+  setMobileMenuOpen(false);
+}}
         >
           Overview
         </button>
@@ -141,6 +144,7 @@ useEffect(() => {
           onClick={() => {
             setCurrentSection("documentation");
             setCurrentTab("policies");
+            setMobileMenuOpen(false);
           }}
         >
           Documentation
@@ -153,6 +157,7 @@ useEffect(() => {
           onClick={() => {
             setCurrentSection("finance");
             setCurrentTab("overview");
+            setMobileMenuOpen(false);
           }}
         >
           Finance
@@ -165,6 +170,7 @@ useEffect(() => {
           onClick={() => {
             setCurrentSection("safeguarding");
             setCurrentTab("overview");
+            setMobileMenuOpen(false);
           }}
         >
           Safeguarding
@@ -177,6 +183,7 @@ useEffect(() => {
           onClick={() => {
             setCurrentSection("complaints");
             setCurrentTab("overview");
+            setMobileMenuOpen(false);
           }}
         >
           Complaints
@@ -189,6 +196,7 @@ useEffect(() => {
           onClick={() => {
             setCurrentSection("risk");
             setCurrentTab("risk-register");
+            setMobileMenuOpen(false);
           }}
         >
           Risk & Compliance
@@ -201,6 +209,7 @@ useEffect(() => {
           onClick={() => {
             setCurrentSection("governance");
             setCurrentTab("trustees");
+            setMobileMenuOpen(false);
           }}
         >
           Governance
@@ -213,6 +222,7 @@ useEffect(() => {
           onClick={() => {
             setCurrentSection("organisation");
             setCurrentTab("overview");
+            setMobileMenuOpen(false);
           }}
         >
           Organisation
