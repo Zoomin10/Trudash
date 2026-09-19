@@ -328,6 +328,7 @@ useEffect(() => {
 
                <div className="module-value">
  {documentationSummary?.incomplete ?? "—"}
+ 
 </div>
 
                 <div className="module-description">
