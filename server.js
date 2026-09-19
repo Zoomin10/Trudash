@@ -80,6 +80,55 @@ app.get("/api/governance/documents", async (req, res) => {
     });
   }
 });
+app.get("/api/documentation-summary", async (req, res) => {
+  try {
+    const summaries = await Promise.all(
+      Object.entries(documentCategories).map(
+        async ([key, category]) => {
+          const summary = await getDocumentCategorySummary(
+            category.folderPath
+          );
+
+          return {
+            category: key,
+            ...summary,
+          };
+        }
+      )
+    );
+
+    const total = summaries.reduce(
+      (sum, category) => sum + category.total,
+      0
+    );
+
+    const complete = summaries.reduce(
+      (sum, category) => sum + category.complete,
+      0
+    );
+
+    const incomplete = summaries.reduce(
+      (sum, category) => sum + category.incomplete,
+      0
+    );
+
+    res.json({
+      total,
+      complete,
+      incomplete,
+    });
+  } catch (error) {
+    console.error(
+      "Unable to retrieve documentation summary:",
+      error
+    );
+
+    res.status(500).json({
+      error: "Unable to retrieve documentation summary.",
+    });
+  }
+});
+
 app.get("/api/documentation/:category", async (req, res) => {
   try {
     const category =
