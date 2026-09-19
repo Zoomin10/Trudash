@@ -52,6 +52,7 @@ const [documentationData, setDocumentationData] = useState({});
 const [currentSection, setCurrentSection] = useState("overview");
 const [currentTab, setCurrentTab] = useState("policies");
 const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+const [documentationSummary, setDocumentationSummary] = useState(null);
 
 useEffect(() => {
   if (currentSection !== "documentation") {
@@ -67,6 +68,29 @@ useEffect(() => {
   if (documentationData[currentTab]) {
     return;
   }
+useEffect(() => {
+  async function loadDocumentationSummary() {
+    try {
+      const response = await fetch("/api/documentation-summary");
+
+      if (!response.ok) {
+        throw new Error(
+          "Unable to retrieve documentation summary"
+        );
+      }
+
+      const data = await response.json();
+      setDocumentationSummary(data);
+    } catch (error) {
+      console.error(
+        "Unable to load documentation summary:",
+        error
+      );
+    }
+  }
+
+  loadDocumentationSummary();
+}, []);
 
   fetch(`/api/documentation/${category.apiCategory}`)
     .then((response) => {
@@ -303,7 +327,7 @@ useEffect(() => {
                 </div>
 
                <div className="module-value">
-  {documentationData.policies?.incomplete ?? "—"}
+ {documentationSummary?.incomplete ?? "—"}
 </div>
 
                 <div className="module-description">
