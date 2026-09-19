@@ -1,4 +1,27 @@
+function formatDocumentName(filename) {
+  if (!filename) return "";
+
+  return filename
+    // Remove file extension
+    .replace(/\.(docx|pdf|xlsx|xls)$/i, "")
+
+    // Remove version suffixes such as _v1, _v1.0, " v1"
+    .replace(/[_\s-]+v\d+(\.\d+)?$/i, "")
+
+    // Replace underscores with spaces
+    .replace(/_/g, " ")
+
+    // Remove WWFC after the document reference
+    .replace(/^([A-Z]+\d+)\s+WWFC\s+/i, "$1 — ")
+
+    // Clean up repeated spaces
+    .replace(/\s+/g, " ")
+
+    .trim();
+}
+
 function DocumentRegister({ data, title, description }) {
+
   if (!data) {
     return (
       <section className="panel">
@@ -88,9 +111,9 @@ function DocumentRegister({ data, title, description }) {
             target="_blank"
             rel="noopener noreferrer"
           >
-            <strong>
-              {document.name}
-            </strong>
+           <strong>
+  {formatDocumentName(document.name)}
+</strong>
           </a>
         </td>
 
