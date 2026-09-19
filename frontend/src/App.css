@@ -679,3 +679,13 @@ button.document-card:hover {
     max-width: calc(100% - 110px);
   }
 }
+.policy-table th:first-child,
+.policy-table td:first-child {
+  text-align: left;
+}
+.policy-table td:first-child a {
+  display: block;
+  text-align: left;
+  overflow-wrap: break-word;
+  word-break: normal;
+}

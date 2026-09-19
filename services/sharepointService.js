@@ -244,6 +244,7 @@ const documentOwner = await getSharePointUser(
 const sharePointUrl = document.webUrl || null;
 const missingFields = [];
 
+// Core metadata required for every controlled document
 if (!fields.GovernanceCategory?.[0]) {
   missingFields.push("Governance Category");
 }
@@ -256,16 +257,26 @@ if (!fields.ControlledVersion) {
   missingFields.push("Controlled Version");
 }
 
-if (!fields.ApprovedDate) {
-  missingFields.push("Approved Date");
-}
-
-if (!fields.NextReviewDate) {
-  missingFields.push("Next Review Date");
-}
-
 if (!fields.DocumentStatus) {
   missingFields.push("Document Status");
+}
+
+// Approval metadata is only required once the document
+// has completed the draft/review stage.
+const requiresApprovalMetadata = [
+  "Approved",
+  "Superseded",
+  "Archived",
+].includes(fields.DocumentStatus);
+
+if (requiresApprovalMetadata) {
+  if (!fields.ApprovedDate) {
+    missingFields.push("Approved Date");
+  }
+
+  if (!fields.NextReviewDate) {
+    missingFields.push("Next Review Date");
+  }
 }
 
 const metadataComplete = missingFields.length === 0;
