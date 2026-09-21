@@ -237,6 +237,7 @@ async function getDocumentMetadata(document) {
 
   const listItem = await response.json();
   const fields = listItem.fields;
+  console.log("SharePoint metadata fields:", fields);
 const documentOwner = await getSharePointUser(
   fields.DocumentOwnerLookupId
 );
