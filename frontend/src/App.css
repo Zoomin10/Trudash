@@ -689,3 +689,55 @@ button.document-card:hover {
   overflow-wrap: break-word;
   word-break: normal;
 }
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #f1f5f9;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 40px 32px;
+  background: white;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+}
+
+.auth-logo {
+  width: 110px;
+  height: auto;
+  margin: 0 auto 20px;
+  display: block;
+}
+
+.auth-card h1 {
+  margin: 0 0 8px;
+  color: #111827;
+  font-size: 30px;
+}
+
+.auth-card p {
+  margin: 0 0 28px;
+  color: #64748b;
+  font-size: 15px;
+}
+
+.auth-login-button {
+  display: inline-block;
+  padding: 12px 22px;
+  border-radius: 8px;
+  background: #111827;
+  color: white;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.auth-login-button:hover {
+  background: #1f2937;
+}
