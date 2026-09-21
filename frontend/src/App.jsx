@@ -48,7 +48,7 @@ const documentationCategories = {
 
 function App() {
 const [documentationData, setDocumentationData] = useState({});
-  const [error, setError] = useState(null);
+const [error, setError] = useState(null);
 const [currentSection, setCurrentSection] = useState("overview");
 const [currentTab, setCurrentTab] = useState("policies");
 const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -68,6 +68,43 @@ useEffect(() => {
   if (documentationData[currentTab]) {
     return;
   }
+useEffect(() => {
+  if (currentSection !== "documentation") {
+    return;
+  }
+
+  const category = documentationCategories[currentTab];
+
+  if (!category) {
+    return;
+  }
+
+  if (documentationData[currentTab]) {
+    return;
+  }
+
+  fetch(`/api/documentation/${category.apiCategory}`)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(
+          `Unable to load ${category.title}`
+        );
+      }
+
+      return response.json();
+    })
+    .then((data) => {
+      setDocumentationData((current) => ({
+        ...current,
+        [currentTab]: data,
+      }));
+    })
+    .catch((err) => {
+      console.error("Documentation error:", err);
+      setError(err.message);
+    });
+}, [currentSection, currentTab, documentationData]);
+
 useEffect(() => {
   async function loadDocumentationSummary() {
     try {
@@ -91,28 +128,6 @@ useEffect(() => {
 
   loadDocumentationSummary();
 }, []);
-
-  fetch(`/api/documentation/${category.apiCategory}`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(
-          `Unable to load ${category.title}`
-        );
-      }
-
-      return response.json();
-    })
-    .then((data) => {
-      setDocumentationData((current) => ({
-        ...current,
-        [currentTab]: data,
-      }));
-    })
-    .catch((err) => {
-      console.error("Documentation error:", err);
-      setError(err.message);
-    });
-}, [currentSection, currentTab, documentationData]);
 
   if (error) {
     return <div>Unable to load Trudash: {error}</div>;
@@ -328,7 +343,7 @@ useEffect(() => {
 
                <div className="module-value">
  {documentationSummary?.incomplete ?? "—"}
- 
+
 </div>
 
                 <div className="module-description">
