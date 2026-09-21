@@ -63,6 +63,22 @@ app.use(
 
 app.use(express.json());
 
+app.get("/api/auth/me", (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).json({
+      authenticated: false,
+    });
+  }
+
+  res.json({
+    authenticated: true,
+    user: {
+      name: req.session.user.name,
+      username: req.session.user.username,
+    },
+  });
+});
+
 app.get("/auth/login", async (req, res) => {
   try {
     const authUrl = await msalClient.getAuthCodeUrl(
