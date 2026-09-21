@@ -68,27 +68,11 @@ useEffect(() => {
   if (documentationData[currentTab]) {
     return;
   }
-useEffect(() => {
-  if (currentSection !== "documentation") {
-    return;
-  }
-
-  const category = documentationCategories[currentTab];
-
-  if (!category) {
-    return;
-  }
-
-  if (documentationData[currentTab]) {
-    return;
-  }
 
   fetch(`/api/documentation/${category.apiCategory}`)
     .then((response) => {
       if (!response.ok) {
-        throw new Error(
-          `Unable to load ${category.title}`
-        );
+        throw new Error(`Unable to load ${category.title}`);
       }
 
       return response.json();
@@ -111,9 +95,7 @@ useEffect(() => {
       const response = await fetch("/api/documentation-summary");
 
       if (!response.ok) {
-        throw new Error(
-          "Unable to retrieve documentation summary"
-        );
+        throw new Error("Unable to retrieve documentation summary");
       }
 
       const data = await response.json();
