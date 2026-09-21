@@ -741,3 +741,30 @@ button.document-card:hover {
 .auth-login-button:hover {
   background: #1f2937;
 }
+.signed-in-user {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.signed-in-user span {
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.logout-link {
+  color: #94a3b8;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.logout-link:hover {
+  color: white;
+}
+
+.sidebar-club-name {
+  color: #94a3b8;
+  font-size: 11px;
+}

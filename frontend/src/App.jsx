@@ -344,10 +344,21 @@ if (!auth.authenticated) {
         </button>
 
       </nav>
+<div className="sidebar-footer">
+  {auth.user && (
+    <div className="signed-in-user">
+      <span>{auth.user.name}</span>
 
-      <div className="sidebar-footer">
-        Wroughton & Wichelstowe FC
-      </div>
+      <a href="/auth/logout" className="logout-link">
+        Sign out
+      </a>
+    </div>
+  )}
+
+  <div className="sidebar-club-name">
+    Wroughton & Wichelstowe FC
+  </div>
+</div>
 
     </aside>
 

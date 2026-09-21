@@ -146,6 +146,21 @@ req.session.save((error) => {
   }
 });
 
+app.get("/auth/logout", (req, res) => {
+  req.session.destroy((error) => {
+    if (error) {
+      console.error("Unable to destroy session:", error);
+
+      return res.status(500).json({
+        error: "Unable to sign out.",
+      });
+    }
+
+    res.clearCookie("connect.sid");
+    res.redirect("/");
+  });
+});
+
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
