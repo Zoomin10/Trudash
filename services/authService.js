@@ -24,6 +24,7 @@ const msalClient =
 const authCodeUrlParameters = {
   scopes: ["openid", "profile", "email"],
   redirectUri,
+  prompt: "select_account",
 };
 
 module.exports = {
