@@ -192,7 +192,17 @@ body {
 .policy-table tbody tr:hover {
   background: #f8fafc;
 }
+/* Keep document names left aligned */
+.policy-table th:first-child,
+.policy-table td:first-child {
+  text-align: left;
+}
 
+/* Centre all register metadata columns */
+.policy-table th:nth-child(n + 2),
+.policy-table td:nth-child(n + 2) {
+  text-align: center;
+}
 /* Status pills */
 
 .status {
