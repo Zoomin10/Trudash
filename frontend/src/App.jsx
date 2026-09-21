@@ -192,7 +192,7 @@ if (!auth.authenticated) {
         />
 
         <h1>Trudash</h1>
-        <p>WWFC Trustee Governance</p>
+        <p>WWFC Trustee Dashboard</p>
 
         <a
           href="/auth/login"
