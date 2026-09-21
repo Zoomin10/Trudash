@@ -79,7 +79,7 @@ function DocumentRegister({ data, title, description }) {
               <th>Owner</th>
               <th>Status</th>
               <th>Next Review</th>
-              <th>Governance Health</th>
+              <th>Hygiene</th>
             </tr>
           </thead>
 
