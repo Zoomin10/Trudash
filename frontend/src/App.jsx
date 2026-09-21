@@ -61,9 +61,9 @@ const [auth, setAuth] = useState({
 });
 
 useEffect(() => {
-  if (currentSection !== "documentation") {
-    return;
-  }
+if (!auth.authenticated || currentSection !== "documentation") {
+  return;
+}
 
   const category = documentationCategories[currentTab];
 
@@ -93,9 +93,17 @@ useEffect(() => {
       console.error("Documentation error:", err);
       setError(err.message);
     });
-}, [currentSection, currentTab, documentationData]);
+}, [
+  auth.authenticated,
+  currentSection,
+  currentTab,
+  documentationData,
+]);
 
 useEffect(() => {
+  if (!auth.authenticated) {
+  return;
+}
   async function loadDocumentationSummary() {
     try {
       const response = await fetch("/api/documentation-summary");
@@ -115,7 +123,7 @@ useEffect(() => {
   }
 
   loadDocumentationSummary();
-}, []);
+}, [auth.authenticated]);
 
 useEffect(() => {
   async function checkAuthentication() {
