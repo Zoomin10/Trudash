@@ -136,13 +136,13 @@ function DocumentRegister({ data, title, description }) {
           )}
         </td>
 
-        <td>
-          {document.nextReviewDate
-            ? new Date(
-                document.nextReviewDate
-              ).toLocaleDateString("en-GB")
-            : "Not set"}
-        </td>
+       <td>
+  {document.reviewRequirement === "Not Required"
+    ? "Not Required"
+    : document.nextReviewDate
+      ? new Date(document.nextReviewDate).toLocaleDateString("en-GB")
+      : "—"}
+</td>
 
         <td>
 
