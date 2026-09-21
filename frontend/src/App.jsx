@@ -54,6 +54,12 @@ const [currentTab, setCurrentTab] = useState("policies");
 const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 const [documentationSummary, setDocumentationSummary] = useState(null);
 
+const [auth, setAuth] = useState({
+  loading: true,
+  authenticated: false,
+  user: null,
+});
+
 useEffect(() => {
   if (currentSection !== "documentation") {
     return;
@@ -109,6 +115,45 @@ useEffect(() => {
   }
 
   loadDocumentationSummary();
+}, []);
+
+useEffect(() => {
+  async function checkAuthentication() {
+    try {
+      const response = await fetch("/api/auth/me");
+
+      if (response.status === 401) {
+        setAuth({
+          loading: false,
+          authenticated: false,
+          user: null,
+        });
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Unable to check authentication");
+      }
+
+      const data = await response.json();
+
+      setAuth({
+        loading: false,
+        authenticated: data.authenticated,
+        user: data.user || null,
+      });
+    } catch (error) {
+      console.error("Authentication check failed:", error);
+
+      setAuth({
+        loading: false,
+        authenticated: false,
+        user: null,
+      });
+    }
+  }
+
+  checkAuthentication();
 }, []);
 
   if (error) {
