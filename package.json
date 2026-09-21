@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-"scripts": {
-  "start": "node server.js",
-  "build": "npm --prefix frontend install && npm --prefix frontend run build",
-  "test:sharepoint": "node graph-test.js"
-},
+  "scripts": {
+    "start": "node server.js",
+    "build": "npm --prefix frontend install && npm --prefix frontend run build",
+    "test:sharepoint": "node graph-test.js"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -15,6 +15,7 @@
   "dependencies": {
     "@azure/msal-node": "^6.0.1",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "express-session": "^1.19.0"
   }
 }

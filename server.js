@@ -8,7 +8,11 @@ const {
 } = require("./services/sharepointService");
 const app = express();
 const PORT = process.env.PORT || 3001;
-
+const {
+  msalClient,
+  authCodeUrlParameters,
+  redirectUri,
+} = require("./services/authService");
 const documentCategories = {
   policies: {
     name: "Policy Documents",
@@ -42,6 +46,45 @@ const documentCategories = {
 };
 
 app.use(express.json());
+
+app.get("/auth/login", async (req, res) => {
+  try {
+    const authUrl = await msalClient.getAuthCodeUrl(
+      authCodeUrlParameters
+    );
+
+    res.redirect(authUrl);
+  } catch (error) {
+    console.error("Unable to start sign-in:", error);
+
+    res.status(500).json({
+      error: "Unable to start sign-in.",
+    });
+  }
+});
+
+app.get("/auth/redirect", async (req, res) => {
+  try {
+    const tokenResponse = await msalClient.acquireTokenByCode({
+      code: req.query.code,
+      scopes: authCodeUrlParameters.scopes,
+      redirectUri,
+    });
+
+    console.log(
+      "Successful Entra sign-in:",
+      tokenResponse.account?.username
+    );
+
+    res.redirect("/");
+  } catch (error) {
+    console.error("Unable to complete sign-in:", error);
+
+    res.status(500).json({
+      error: "Unable to complete sign-in.",
+    });
+  }
+});
 
 app.get("/api/health", (req, res) => {
   res.json({
