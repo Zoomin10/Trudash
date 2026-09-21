@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const express = require("express");
 const path = require("path");
+const session = require("express-session");
 const {
   getPolicyGovernanceSummary,
   getDocumentCategorySummary,
@@ -44,6 +45,21 @@ const documentCategories = {
     folderPath: "Digital Governance/Doc versions",
   },
 };
+app.set("trust proxy", 1);
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 8 * 60 * 60 * 1000,
+    },
+  })
+);
 
 app.use(express.json());
 
@@ -71,12 +87,29 @@ app.get("/auth/redirect", async (req, res) => {
       redirectUri,
     });
 
-    console.log(
-      "Successful Entra sign-in:",
-      tokenResponse.account?.username
-    );
+  req.session.user = {
+  homeAccountId: tokenResponse.account?.homeAccountId,
+  username: tokenResponse.account?.username,
+  name: tokenResponse.account?.name,
+};
 
-    res.redirect("/");
+console.log(
+  "Successful Entra sign-in:",
+  req.session.user.username
+);
+
+req.session.save((error) => {
+  if (error) {
+    console.error("Unable to save session:", error);
+
+    return res.status(500).json({
+      error: "Unable to create authenticated session.",
+    });
+  }
+
+  res.redirect("/");
+});
+
   } catch (error) {
     console.error("Unable to complete sign-in:", error);
 
