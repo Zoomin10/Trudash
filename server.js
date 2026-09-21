@@ -79,6 +79,17 @@ app.get("/api/auth/me", (req, res) => {
   });
 });
 
+function requireAuth(req, res, next) {
+  if (!req.session.user) {
+    return res.status(401).json({
+      authenticated: false,
+      error: "Authentication required.",
+    });
+  }
+
+  next();
+}
+
 app.get("/auth/login", async (req, res) => {
   try {
     const authUrl = await msalClient.getAuthCodeUrl(
