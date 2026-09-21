@@ -156,6 +156,47 @@ useEffect(() => {
   checkAuthentication();
 }, []);
 
+if (auth.loading) {
+  return (
+    <div className="auth-screen">
+      <div className="auth-card">
+        <img
+          src="/images/wwfc-crest.png"
+          alt="Wroughton & Wichelstowe FC"
+          className="auth-logo"
+        />
+
+        <h1>Trudash</h1>
+        <p>Checking your access…</p>
+      </div>
+    </div>
+  );
+}
+
+if (!auth.authenticated) {
+  return (
+    <div className="auth-screen">
+      <div className="auth-card">
+        <img
+          src="/images/wwfc-crest.png"
+          alt="Wroughton & Wichelstowe FC"
+          className="auth-logo"
+        />
+
+        <h1>Trudash</h1>
+        <p>WWFC Trustee Governance</p>
+
+        <a
+          href="/auth/login"
+          className="auth-login-button"
+        >
+          Sign in with Microsoft
+        </a>
+      </div>
+    </div>
+  );
+}
+
   if (error) {
     return <div>Unable to load Trudash: {error}</div>;
   }
