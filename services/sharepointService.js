@@ -237,13 +237,7 @@ async function getDocumentMetadata(document) {
 
   const listItem = await response.json();
   const fields = listItem.fields;
-console.log(
-  "Review-related fields:",
-  Object.entries(fields)
-    .filter(([key]) =>
-      key.toLowerCase().includes("review")
-    )
-);
+
 const documentOwner = await getSharePointUser(
   fields.DocumentOwnerLookupId
 );
@@ -281,7 +275,10 @@ if (requiresApprovalMetadata) {
     missingFields.push("Approved Date");
   }
 
-  if (!fields.NextReviewDate) {
+  const reviewNotRequired =
+    fields.ReviewRequirement === "Not Required";
+
+  if (!reviewNotRequired && !fields.NextReviewDate) {
     missingFields.push("Next Review Date");
   }
 }
@@ -301,6 +298,7 @@ return {
     approvedDate: fields.ApprovedDate || null,
     nextReviewDate: fields.NextReviewDate || null,
     documentStatus: fields.DocumentStatus || null,
+    reviewRequirement: fields.ReviewRequirement || null,
     metadataComplete: metadataComplete,
 missingFields: missingFields,
   };
