@@ -152,7 +152,7 @@ app.get("/api/health", (req, res) => {
     application: "Trudash",
   });
 });
-app.get("/api/governance/policies", async (req, res) => {
+app.get("/api/governance/policies", requireAuth, async (req, res) => {
   try {
     const summary = await getPolicyGovernanceSummary();
 
@@ -165,7 +165,7 @@ app.get("/api/governance/policies", async (req, res) => {
     });
   }
 });
-app.get("/api/governance/documents", async (req, res) => {
+app.get("/api/governance/documents", requireAuth, async (req, res) => {
   try {
     const summary = await getDocumentCategorySummary(
       "Governance Documents/Doc Versions"
@@ -183,7 +183,7 @@ app.get("/api/governance/documents", async (req, res) => {
     });
   }
 });
-app.get("/api/documentation-summary", async (req, res) => {
+app.get("/api/documentation-summary", requireAuth, async (req, res) => {
   try {
     const summaries = await Promise.all(
       Object.entries(documentCategories).map(
@@ -232,7 +232,7 @@ app.get("/api/documentation-summary", async (req, res) => {
   }
 });
 
-app.get("/api/documentation/:category", async (req, res) => {
+app.get("/api/documentation/:category", requireAuth, async (req, res) => {
   try {
     const category =
       documentCategories[req.params.category];
