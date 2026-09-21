@@ -54,10 +54,16 @@ const [currentTab, setCurrentTab] = useState("policies");
 const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 const [documentationSummary, setDocumentationSummary] = useState(null);
 
+const [auth, setAuth] = useState({
+  loading: true,
+  authenticated: false,
+  user: null,
+});
+
 useEffect(() => {
-  if (currentSection !== "documentation") {
-    return;
-  }
+if (!auth.authenticated || currentSection !== "documentation") {
+  return;
+}
 
   const category = documentationCategories[currentTab];
 
@@ -87,9 +93,17 @@ useEffect(() => {
       console.error("Documentation error:", err);
       setError(err.message);
     });
-}, [currentSection, currentTab, documentationData]);
+}, [
+  auth.authenticated,
+  currentSection,
+  currentTab,
+  documentationData,
+]);
 
 useEffect(() => {
+  if (!auth.authenticated) {
+  return;
+}
   async function loadDocumentationSummary() {
     try {
       const response = await fetch("/api/documentation-summary");
@@ -109,7 +123,87 @@ useEffect(() => {
   }
 
   loadDocumentationSummary();
+}, [auth.authenticated]);
+
+useEffect(() => {
+  async function checkAuthentication() {
+    try {
+      const response = await fetch("/api/auth/me");
+
+      if (response.status === 401) {
+        setAuth({
+          loading: false,
+          authenticated: false,
+          user: null,
+        });
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Unable to check authentication");
+      }
+
+      const data = await response.json();
+
+      setAuth({
+        loading: false,
+        authenticated: data.authenticated,
+        user: data.user || null,
+      });
+    } catch (error) {
+      console.error("Authentication check failed:", error);
+
+      setAuth({
+        loading: false,
+        authenticated: false,
+        user: null,
+      });
+    }
+  }
+
+  checkAuthentication();
 }, []);
+
+if (auth.loading) {
+  return (
+    <div className="auth-screen">
+      <div className="auth-card">
+        <img
+          src="/images/wwfc-crest.png"
+          alt="Wroughton & Wichelstowe FC"
+          className="auth-logo"
+        />
+
+        <h1>Trudash</h1>
+        <p>Checking your access…</p>
+      </div>
+    </div>
+  );
+}
+
+if (!auth.authenticated) {
+  return (
+    <div className="auth-screen">
+      <div className="auth-card">
+        <img
+          src="/images/wwfc-crest.png"
+          alt="Wroughton & Wichelstowe FC"
+          className="auth-logo"
+        />
+
+        <h1>Trudash</h1>
+        <p>WWFC Trustee Governance</p>
+
+        <a
+          href="/auth/login"
+          className="auth-login-button"
+        >
+          Sign in with Microsoft
+        </a>
+      </div>
+    </div>
+  );
+}
 
   if (error) {
     return <div>Unable to load Trudash: {error}</div>;
@@ -250,10 +344,21 @@ useEffect(() => {
         </button>
 
       </nav>
+<div className="sidebar-footer">
+  {auth.user && (
+    <div className="signed-in-user">
+      <span>{auth.user.name}</span>
 
-      <div className="sidebar-footer">
-        Wroughton & Wichelstowe FC
-      </div>
+      <a href="/auth/logout" className="logout-link">
+        Sign out
+      </a>
+    </div>
+  )}
+
+  <div className="sidebar-club-name">
+    Wroughton & Wichelstowe FC
+  </div>
+</div>
 
     </aside>
 

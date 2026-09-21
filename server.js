@@ -2,13 +2,18 @@ require("dotenv").config();
 
 const express = require("express");
 const path = require("path");
+const session = require("express-session");
 const {
   getPolicyGovernanceSummary,
   getDocumentCategorySummary,
 } = require("./services/sharepointService");
 const app = express();
 const PORT = process.env.PORT || 3001;
-
+const {
+  msalClient,
+  authCodeUrlParameters,
+  redirectUri,
+} = require("./services/authService");
 const documentCategories = {
   policies: {
     name: "Policy Documents",
@@ -40,8 +45,121 @@ const documentCategories = {
     folderPath: "Digital Governance/Doc versions",
   },
 };
+app.set("trust proxy", 1);
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 8 * 60 * 60 * 1000,
+    },
+  })
+);
 
 app.use(express.json());
+
+app.get("/api/auth/me", (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).json({
+      authenticated: false,
+    });
+  }
+
+  res.json({
+    authenticated: true,
+    user: {
+      name: req.session.user.name,
+      username: req.session.user.username,
+    },
+  });
+});
+
+function requireAuth(req, res, next) {
+  if (!req.session.user) {
+    return res.status(401).json({
+      authenticated: false,
+      error: "Authentication required.",
+    });
+  }
+
+  next();
+}
+
+app.get("/auth/login", async (req, res) => {
+  try {
+    const authUrl = await msalClient.getAuthCodeUrl(
+      authCodeUrlParameters
+    );
+
+    res.redirect(authUrl);
+  } catch (error) {
+    console.error("Unable to start sign-in:", error);
+
+    res.status(500).json({
+      error: "Unable to start sign-in.",
+    });
+  }
+});
+
+app.get("/auth/redirect", async (req, res) => {
+  try {
+    const tokenResponse = await msalClient.acquireTokenByCode({
+      code: req.query.code,
+      scopes: authCodeUrlParameters.scopes,
+      redirectUri,
+    });
+
+  req.session.user = {
+  homeAccountId: tokenResponse.account?.homeAccountId,
+  username: tokenResponse.account?.username,
+  name: tokenResponse.account?.name,
+};
+
+console.log(
+  "Successful Entra sign-in:",
+  req.session.user.username
+);
+
+req.session.save((error) => {
+  if (error) {
+    console.error("Unable to save session:", error);
+
+    return res.status(500).json({
+      error: "Unable to create authenticated session.",
+    });
+  }
+
+  res.redirect("/");
+});
+
+  } catch (error) {
+    console.error("Unable to complete sign-in:", error);
+
+    res.status(500).json({
+      error: "Unable to complete sign-in.",
+    });
+  }
+});
+
+app.get("/auth/logout", (req, res) => {
+  req.session.destroy((error) => {
+    if (error) {
+      console.error("Unable to destroy session:", error);
+
+      return res.status(500).json({
+        error: "Unable to sign out.",
+      });
+    }
+
+    res.clearCookie("connect.sid");
+    res.redirect("/");
+  });
+});
 
 app.get("/api/health", (req, res) => {
   res.json({
@@ -49,7 +167,7 @@ app.get("/api/health", (req, res) => {
     application: "Trudash",
   });
 });
-app.get("/api/governance/policies", async (req, res) => {
+app.get("/api/governance/policies", requireAuth, async (req, res) => {
   try {
     const summary = await getPolicyGovernanceSummary();
 
@@ -62,7 +180,7 @@ app.get("/api/governance/policies", async (req, res) => {
     });
   }
 });
-app.get("/api/governance/documents", async (req, res) => {
+app.get("/api/governance/documents", requireAuth, async (req, res) => {
   try {
     const summary = await getDocumentCategorySummary(
       "Governance Documents/Doc Versions"
@@ -80,7 +198,7 @@ app.get("/api/governance/documents", async (req, res) => {
     });
   }
 });
-app.get("/api/documentation-summary", async (req, res) => {
+app.get("/api/documentation-summary", requireAuth, async (req, res) => {
   try {
     const summaries = await Promise.all(
       Object.entries(documentCategories).map(
@@ -129,7 +247,7 @@ app.get("/api/documentation-summary", async (req, res) => {
   }
 });
 
-app.get("/api/documentation/:category", async (req, res) => {
+app.get("/api/documentation/:category", requireAuth, async (req, res) => {
   try {
     const category =
       documentCategories[req.params.category];
