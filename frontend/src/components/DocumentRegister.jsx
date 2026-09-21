@@ -79,7 +79,7 @@ function DocumentRegister({ data, title, description }) {
               <th>Owner</th>
               <th>Status</th>
               <th>Next Review</th>
-              <th>Governance Health</th>
+              <th>Hygiene</th>
             </tr>
           </thead>
 
@@ -136,13 +136,13 @@ function DocumentRegister({ data, title, description }) {
           )}
         </td>
 
-        <td>
-          {document.nextReviewDate
-            ? new Date(
-                document.nextReviewDate
-              ).toLocaleDateString("en-GB")
-            : "Not set"}
-        </td>
+       <td>
+  {document.reviewRequirement === "Not Required"
+    ? "Not Required"
+    : document.nextReviewDate
+      ? new Date(document.nextReviewDate).toLocaleDateString("en-GB")
+      : "—"}
+</td>
 
         <td>
 
