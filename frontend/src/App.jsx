@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import DocumentRegister from "./components/DocumentRegister";
+import MembersDashboard from "./components/MembersDashboard";
 
 const documentationCategories = {
   policies: {
