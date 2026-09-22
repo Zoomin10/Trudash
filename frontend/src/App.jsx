@@ -839,7 +839,8 @@ if (!auth.authenticated) {
     </section>
   </>
 )}
-{currentTab !== "overview" && (
+{currentTab !== "overview" &&
+  currentTab !== "teams" && (
   <section className="panel">
     <div className="panel-header">
       <h2>
@@ -852,6 +853,54 @@ if (!auth.authenticated) {
       <p>
         TeamFeePay data will be displayed here.
       </p>
+    </div>
+  </section>
+)}
+{currentTab === "teams" && (
+  <section className="panel">
+    <div className="panel-header">
+      <h2>Team Membership</h2>
+      <p>
+        Current squad sizes from the latest TeamFeePay
+        season report.
+      </p>
+    </div>
+
+    <div className="policy-table-wrapper">
+      <table className="policy-table">
+        <thead>
+          <tr>
+            <th>Team</th>
+            <th>Players</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {membersSummary?.teams &&
+            Object.entries(membersSummary.teams)
+              .sort((a, b) =>
+                a[0].localeCompare(b[0])
+              )
+              .map(([team, count]) => (
+                <tr key={team}>
+                  <td>
+                    {team
+                      .replace(
+                        "Wroughton & Wichelstowe FC",
+                        ""
+                      )
+                      .replace(
+                        "Wroughton and Wichelstowe FC",
+                        ""
+                      )
+                      .trim()}
+                  </td>
+
+                  <td>{count}</td>
+                </tr>
+              ))}
+        </tbody>
+      </table>
     </div>
   </section>
 )}
