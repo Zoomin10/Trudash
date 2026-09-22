@@ -9,6 +9,8 @@ const {
   getDocumentCategorySummary,
   getTeamFeePayReports,
   getTeamFeePaySeasonSummary,
+  getTeamFeePayAgreementSummary,
+  inspectTeamFeePayAgreementReport,
 } = require("./services/sharepointService");
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -282,6 +284,27 @@ app.get("/api/documentation/:category", requireAuth, async (req, res) => {
     });
   }
 });
+app.get(
+  "/api/members/agreements",
+  requireAuth,
+  async (req, res) => {
+    try {
+      const summary =
+        await getTeamFeePayAgreementSummary();
+
+      res.json(summary);
+    } catch (error) {
+      console.error(
+        "Agreement summary failed:",
+        error.message
+      );
+
+      res.status(500).json({
+        error: "Unable to load TeamFeePay agreement summary",
+      });
+    }
+  }
+);
 
 app.get("/api/members/reports", requireAuth, async (req, res) => {
   try {

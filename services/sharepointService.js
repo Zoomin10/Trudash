@@ -404,6 +404,8 @@ async function getTeamFeePayWorkbook(fileId) {
     cellDates: true,
   });
 }
+
+
 async function getTeamFeePaySeasonSummary() {
   const reports = await getTeamFeePayReports();
 
@@ -635,6 +637,114 @@ const payments = {
   teams: teamCounts,
   };
 }
+async function getTeamFeePayAgreementSummary() {
+  const reports = await getTeamFeePayReports();
+
+  const agreementReports = reports
+    .filter((report) =>
+      report.name.includes("member_document_agreement_status")
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.lastModifiedDateTime) -
+        new Date(a.lastModifiedDateTime)
+    );
+
+  if (agreementReports.length === 0) {
+    throw new Error("No TeamFeePay agreement report found");
+  }
+
+  const report = agreementReports[0];
+  const workbook = await getTeamFeePayWorkbook(report.id);
+
+  const signedSheet = workbook.Sheets["Signed"];
+  const notSignedSheet = workbook.Sheets["Not Signed"];
+
+  if (!signedSheet || !notSignedSheet) {
+    throw new Error(
+      "Expected Signed and Not Signed sheets were not found"
+    );
+  }
+
+  const signedRows = XLSX.utils.sheet_to_json(signedSheet, {
+    defval: null,
+  });
+
+  const notSignedRows = XLSX.utils.sheet_to_json(notSignedSheet, {
+    defval: null,
+  });
+
+  const agreements = {};
+
+  // Count signed documents
+ // Count signed agreements
+for (const row of signedRows) {
+  const documentName = row["Document Name"];
+
+  if (!documentName) continue;
+
+  const cleanName = String(documentName).trim();
+
+  if (!agreements[cleanName]) {
+    agreements[cleanName] = {
+      documentName: cleanName,
+      signed: 0,
+      pending: 0,
+    };
+  }
+
+  agreements[cleanName].signed += 1;
+}
+
+
+// Count pending agreements
+for (const row of notSignedRows) {
+  const pendingDocuments = row["Pending Documents"];
+
+  if (!pendingDocuments) continue;
+
+  const documentNames = String(pendingDocuments)
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
+
+  for (const documentName of documentNames) {
+    if (!agreements[documentName]) {
+      agreements[documentName] = {
+        documentName,
+        signed: 0,
+        pending: 0,
+      };
+    }
+
+    agreements[documentName].pending += 1;
+  }
+}
+  const agreementSummary = Object.values(agreements)
+    .map((agreement) => {
+      const total = agreement.signed + agreement.pending;
+
+      return {
+        ...agreement,
+        total,
+        completionPercentage:
+          total > 0
+            ? Math.round((agreement.signed / total) * 100)
+            : 0,
+      };
+    })
+    .sort((a, b) =>
+      a.documentName.localeCompare(b.documentName)
+    );
+
+  return {
+    source: {
+      fileName: report.name,
+      lastModifiedDateTime: report.lastModifiedDateTime,
+    },
+    agreements: agreementSummary,
+  };
+}
 
 async function getPolicyGovernanceSummary() {
   const policies = await getAllPolicyMetadata();
@@ -670,4 +780,6 @@ module.exports = {
   getTeamFeePayReports,
   getTeamFeePayWorkbook,
   getTeamFeePaySeasonSummary,
+getTeamFeePayAgreementSummary, 
+  
 };
