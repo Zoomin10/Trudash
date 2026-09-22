@@ -404,6 +404,130 @@ async function getTeamFeePayWorkbook(fileId) {
     cellDates: true,
   });
 }
+async function getTeamFeePaySeasonSummary() {
+  const reports = await getTeamFeePayReports();
+
+  const seasonReport = reports.find((report) =>
+    report.name.includes("Season_Report")
+  );
+
+  if (!seasonReport) {
+    throw new Error("TeamFeePay Season Report not found.");
+  }
+
+  const workbook = await getTeamFeePayWorkbook(
+    seasonReport.id
+  );
+
+  const sheetName = "2026-2027 Season";
+  const worksheet = workbook.Sheets[sheetName];
+
+  if (!worksheet) {
+    throw new Error(
+      `Worksheet "${sheetName}" not found in TeamFeePay Season Report.`
+    );
+  }
+
+  const rows = XLSX.utils.sheet_to_json(worksheet, {
+    header: 1,
+    defval: null,
+    blankrows: false,
+  });
+
+  // Row 1 contains grouped headings.
+  // Row 2 contains the actual TeamFeePay column names.
+  const headers = rows[1];
+  const dataRows = rows.slice(2);
+
+  const getColumnIndex = (name, occurrence = 1) => {
+    let count = 0;
+
+    for (let i = 0; i < headers.length; i++) {
+      if (headers[i] === name) {
+        count++;
+
+        if (count === occurrence) {
+          return i;
+        }
+      }
+    }
+
+    return -1;
+  };
+
+  const columns = {
+    memberFirstName: getColumnIndex("First Name", 1),
+    memberLastName: getColumnIndex("Last Name", 1),
+    dateOfBirth: getColumnIndex("Date of Birth", 1),
+    team: getColumnIndex("Team"),
+    memberStatus: getColumnIndex("Status"),
+    paymentStatus: getColumnIndex("Payment Status"),
+    gender: getColumnIndex("Gender"),
+    faRegistrationStatus: getColumnIndex(
+      "FA Registration Status"
+    ),
+    eligibleToPlay: getColumnIndex(
+      "Eligible to play in games"
+    ),
+  };
+
+  const members = dataRows.filter(
+    (row) =>
+      row[columns.memberFirstName] ||
+      row[columns.memberLastName]
+  );
+
+  const countByValue = (columnIndex) => {
+    const counts = {};
+
+    members.forEach((row) => {
+      const value = row[columnIndex];
+
+      if (value !== null && value !== undefined && value !== "") {
+        const key = String(value).trim();
+
+        counts[key] = (counts[key] || 0) + 1;
+      }
+    });
+
+    return counts;
+  };
+
+  return {
+    source: {
+      fileName: seasonReport.name,
+      lastModifiedDateTime:
+        seasonReport.lastModifiedDateTime,
+    },
+
+    totalMembers: members.length,
+
+    membershipStatus: countByValue(
+      columns.memberStatus
+    ),
+
+    gender: countByValue(
+      columns.gender
+    ),
+
+    paymentStatus: countByValue(
+      columns.paymentStatus
+    ),
+
+    faRegistrationStatus: countByValue(
+      columns.faRegistrationStatus
+    ),
+
+    eligibleToPlay: countByValue(
+      columns.eligibleToPlay
+    ),
+
+    teams: countByValue(
+      columns.team
+    ),
+  };
+}
+
 async function getPolicyGovernanceSummary() {
   const policies = await getAllPolicyMetadata();
 
@@ -437,4 +561,5 @@ module.exports = {
   getDocumentCategorySummary,
   getTeamFeePayReports,
   getTeamFeePayWorkbook,
+  getTeamFeePaySeasonSummary,
 };
