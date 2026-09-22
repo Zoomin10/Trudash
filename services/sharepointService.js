@@ -404,6 +404,49 @@ async function getTeamFeePayWorkbook(fileId) {
     cellDates: true,
   });
 }
+async function inspectTeamFeePayAgreementReport() {
+  const reports = await getTeamFeePayReports();
+
+  const agreementReports = reports
+    .filter((report) =>
+      report.name.includes("member_document_agreement_status")
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.lastModifiedDateTime) -
+        new Date(a.lastModifiedDateTime)
+    );
+
+  if (agreementReports.length === 0) {
+    throw new Error("No TeamFeePay agreement report found");
+  }
+
+  const report = agreementReports[0];
+
+  const workbook = await getTeamFeePayWorkbook(report.id);
+
+  const sheets = workbook.SheetNames.map((sheetName) => {
+    const sheet = workbook.Sheets[sheetName];
+
+    const rows = XLSX.utils.sheet_to_json(sheet, {
+      header: 1,
+      defval: null,
+      blankrows: false,
+    });
+
+    return {
+      sheetName,
+      firstRows: rows.slice(0, 3),
+    };
+  });
+
+  return {
+    fileName: report.name,
+    lastModifiedDateTime: report.lastModifiedDateTime,
+    sheets,
+  };
+}
+
 async function getTeamFeePaySeasonSummary() {
   const reports = await getTeamFeePayReports();
 
@@ -670,4 +713,5 @@ module.exports = {
   getTeamFeePayReports,
   getTeamFeePayWorkbook,
   getTeamFeePaySeasonSummary,
+  inspectTeamFeePayAgreementReport,
 };

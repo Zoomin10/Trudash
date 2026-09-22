@@ -9,6 +9,7 @@ const {
   getDocumentCategorySummary,
   getTeamFeePayReports,
   getTeamFeePaySeasonSummary,
+  inspectTeamFeePayAgreementReport,
 } = require("./services/sharepointService");
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -282,6 +283,27 @@ app.get("/api/documentation/:category", requireAuth, async (req, res) => {
     });
   }
 });
+app.get(
+  "/api/members/agreements/inspect",
+  requireAuth,
+  async (req, res) => {
+    try {
+      const inspection =
+        await inspectTeamFeePayAgreementReport();
+
+      res.json(inspection);
+    } catch (error) {
+      console.error(
+        "Agreement report inspection failed:",
+        error.message
+      );
+
+      res.status(500).json({
+        error: "Unable to inspect TeamFeePay agreement report",
+      });
+    }
+  }
+);
 
 app.get("/api/members/reports", requireAuth, async (req, res) => {
   try {
