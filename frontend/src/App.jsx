@@ -656,13 +656,93 @@ if (!auth.authenticated) {
           </>
         )}
 
+{/* =====================================================
+    MEMBERS
+====================================================== */}
+
+{currentSection === "members" && (
+  <>
+    <div className="section-heading">
+      <h2>Members</h2>
+      <p>
+        Membership, registration, payment and agreement oversight.
+      </p>
+    </div>
+
+    <div className="section-tabs">
+
+      <button
+        className={`section-tab ${
+          currentTab === "overview" ? "active" : ""
+        }`}
+        onClick={() => setCurrentTab("overview")}
+      >
+        Overview
+      </button>
+
+      <button
+        className={`section-tab ${
+          currentTab === "teams" ? "active" : ""
+        }`}
+        onClick={() => setCurrentTab("teams")}
+      >
+        Teams
+      </button>
+
+      <button
+        className={`section-tab ${
+          currentTab === "payments" ? "active" : ""
+        }`}
+        onClick={() => setCurrentTab("payments")}
+      >
+        Payments
+      </button>
+
+      <button
+        className={`section-tab ${
+          currentTab === "registration" ? "active" : ""
+        }`}
+        onClick={() => setCurrentTab("registration")}
+      >
+        Registration
+      </button>
+
+      <button
+        className={`section-tab ${
+          currentTab === "agreements" ? "active" : ""
+        }`}
+        onClick={() => setCurrentTab("agreements")}
+      >
+        Agreements
+      </button>
+
+    </div>
+
+    <section className="panel">
+      <div className="panel-header">
+        <h2>
+          {currentTab === "overview" && "Membership Overview"}
+          {currentTab === "teams" && "Teams"}
+          {currentTab === "payments" && "Payments"}
+          {currentTab === "registration" && "Registration"}
+          {currentTab === "agreements" && "Agreements"}
+        </h2>
+
+        <p>
+          TeamFeePay membership data will be displayed here.
+        </p>
+      </div>
+    </section>
+  </>
+)}
 
         {/* =====================================================
             PLACEHOLDER SECTIONS
         ====================================================== */}
 
-        {currentSection !== "overview" &&
-          currentSection !== "documentation" && (
+       {currentSection !== "overview" &&
+  currentSection !== "documentation" &&
+  currentSection !== "members" && (
             <>
 
               <div className="section-heading">
