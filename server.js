@@ -9,6 +9,7 @@ const {
   getDocumentCategorySummary,
   getTeamFeePayReports,
   getTeamFeePaySeasonSummary,
+  getTeamFeePayAgreementSummary,
   inspectTeamFeePayAgreementReport,
 } = require("./services/sharepointService");
 const app = express();

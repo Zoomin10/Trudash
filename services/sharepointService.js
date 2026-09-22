@@ -771,5 +771,5 @@ module.exports = {
   getTeamFeePayWorkbook,
   getTeamFeePaySeasonSummary,
 getTeamFeePayAgreementSummary, 
-  getTeamFeePayAgreementSummary,
+  
 };
