@@ -493,6 +493,23 @@ async function getTeamFeePaySeasonSummary() {
     return counts;
   };
 
+  const teamCounts = {};
+
+members.forEach((row) => {
+  const teamValue = row[columns.team];
+
+  if (!teamValue) return;
+
+  const teams = String(teamValue)
+    .split(",")
+    .map((team) => team.trim())
+    .filter(Boolean);
+
+  teams.forEach((team) => {
+    teamCounts[team] = (teamCounts[team] || 0) + 1;
+  });
+});
+
   return {
     source: {
       fileName: seasonReport.name,
@@ -522,9 +539,7 @@ async function getTeamFeePaySeasonSummary() {
       columns.eligibleToPlay
     ),
 
-    teams: countByValue(
-      columns.team
-    ),
+  teams: teamCounts,
   };
 }
 
