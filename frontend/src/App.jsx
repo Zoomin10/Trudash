@@ -1063,6 +1063,7 @@ if (!auth.authenticated) {
 
 
 {/* Registration */}
+{/* Registration */}
 {currentTab === "registration" && (
   <>
     <section className="module-grid">
@@ -1077,7 +1078,25 @@ if (!auth.authenticated) {
         </div>
 
         <div className="module-description">
-          Registered with The FA
+          FA registration confirmed
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          FA Registration Attention
+        </div>
+
+        <div className="module-value">
+          {membersSummary
+            ? membersSummary.totalMembers -
+              (membersSummary.faRegistrationStatus?.Registered ?? 0)
+            : "—"}
+        </div>
+
+        <div className="module-description">
+          Registration not confirmed as Registered
         </div>
       </div>
 
@@ -1092,7 +1111,7 @@ if (!auth.authenticated) {
         </div>
 
         <div className="module-description">
-          Awaiting completion of FA registration
+          Selected but not yet FA Registered
         </div>
       </div>
 
@@ -1130,14 +1149,14 @@ if (!auth.authenticated) {
         </div>
 
         <div className="module-description">
-          No FA registration status recorded
+          No FA registration status recorded in this report
         </div>
       </div>
 
 
       <div className="module-card">
         <div className="module-title">
-          Eligible to Play
+          TeamFeePay Eligible Flag
         </div>
 
         <div className="module-value">
@@ -1145,14 +1164,11 @@ if (!auth.authenticated) {
         </div>
 
         <div className="module-description">
-          Marked eligible in TeamFeePay
+          TeamFeePay platform flag — not confirmation of FA eligibility
         </div>
       </div>
 
     </section>
-
-
-    
   </>
 )}
      </>
