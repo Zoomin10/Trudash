@@ -741,21 +741,121 @@ if (!auth.authenticated) {
 
     </div>
 
+    {currentTab === "overview" && (
+  <>
+    <section className="module-grid">
+
+      <div className="module-card">
+        <div className="module-title">
+          Active Members
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.membershipStatus?.Active ?? "—"}
+        </div>
+
+        <div className="module-description">
+          {membersSummary
+            ? `${membersSummary.totalMembers} total records`
+            : "Loading membership data"}
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Teams
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.teams
+            ? Object.keys(membersSummary.teams).length
+            : "—"}
+        </div>
+
+        <div className="module-description">
+          TeamFeePay team assignments
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Female Players
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.gender?.Female ?? "—"}
+        </div>
+
+        <div className="module-description">
+          {membersSummary?.gender?.Male !== undefined
+            ? `${membersSummary.gender.Male} male players`
+            : "Membership profile"}
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          FA Registered
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.faRegistrationStatus?.Registered ?? "—"}
+        </div>
+
+        <div className="module-description">
+          Registered with The FA
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Payments Up to Date
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.paymentStatus?.["Up to date"] ?? "—"}
+        </div>
+
+        <div className="module-description">
+          Current TeamFeePay status
+        </div>
+      </div>
+
+    </section>
+
     <section className="panel">
       <div className="panel-header">
-        <h2>
-          {currentTab === "overview" && "Membership Overview"}
-          {currentTab === "teams" && "Teams"}
-          {currentTab === "payments" && "Payments"}
-          {currentTab === "registration" && "Registration"}
-          {currentTab === "agreements" && "Agreements"}
-        </h2>
+        <h2>Membership Overview</h2>
 
         <p>
-          TeamFeePay membership data will be displayed here.
+          Current membership position from the latest
+          TeamFeePay season report.
         </p>
       </div>
     </section>
+  </>
+)}
+{currentTab !== "overview" && (
+  <section className="panel">
+    <div className="panel-header">
+      <h2>
+        {currentTab === "teams" && "Teams"}
+        {currentTab === "payments" && "Payments"}
+        {currentTab === "registration" && "Registration"}
+        {currentTab === "agreements" && "Agreements"}
+      </h2>
+
+      <p>
+        TeamFeePay data will be displayed here.
+      </p>
+    </div>
+  </section>
+)}
+
   </>
 )}
 
