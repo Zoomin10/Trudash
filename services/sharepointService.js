@@ -677,7 +677,28 @@ async function getTeamFeePayAgreementSummary() {
   const agreements = {};
 
   // Count signed documents
- for (const row of notSignedRows) {
+ // Count signed agreements
+for (const row of signedRows) {
+  const documentName = row["Document Name"];
+
+  if (!documentName) continue;
+
+  const cleanName = String(documentName).trim();
+
+  if (!agreements[cleanName]) {
+    agreements[cleanName] = {
+      documentName: cleanName,
+      signed: 0,
+      pending: 0,
+    };
+  }
+
+  agreements[cleanName].signed += 1;
+}
+
+
+// Count pending agreements
+for (const row of notSignedRows) {
   const pendingDocuments = row["Pending Documents"];
 
   if (!pendingDocuments) continue;
@@ -699,7 +720,6 @@ async function getTeamFeePayAgreementSummary() {
     agreements[documentName].pending += 1;
   }
 }
-
   const agreementSummary = Object.values(agreements)
     .map((agreement) => {
       const total = agreement.signed + agreement.pending;
