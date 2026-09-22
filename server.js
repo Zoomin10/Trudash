@@ -2,11 +2,13 @@ require("dotenv").config();
 
 const express = require("express");
 const path = require("path");
+const XLSX = require("xlsx");
 const session = require("express-session");
 const {
   getPolicyGovernanceSummary,
   getDocumentCategorySummary,
   getTeamFeePayReports,
+  getTeamFeePayWorkbook,
 } = require("./services/sharepointService");
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -294,6 +296,57 @@ app.get("/api/members/reports", requireAuth, async (req, res) => {
 
     res.status(500).json({
       error: "Unable to retrieve TeamFeePay reports.",
+    });
+  }
+});
+
+app.get("/api/members/inspect", requireAuth, async (req, res) => {
+  try {
+    const reports = await getTeamFeePayReports();
+
+    const seasonReport = reports.find((report) =>
+      report.name.includes("Season_Report")
+    );
+
+    if (!seasonReport) {
+      return res.status(404).json({
+        error: "Season Report not found.",
+      });
+    }
+
+    const workbook = await getTeamFeePayWorkbook(
+      seasonReport.id
+    );
+
+    const sheets = workbook.SheetNames.map((sheetName) => {
+      const worksheet = workbook.Sheets[sheetName];
+
+      const rows = XLSX.utils.sheet_to_json(worksheet, {
+        defval: null,
+      });
+
+      return {
+        name: sheetName,
+        rowCount: rows.length,
+        columns:
+          rows.length > 0
+            ? Object.keys(rows[0])
+            : [],
+      };
+    });
+
+    res.json({
+      report: seasonReport.name,
+      sheets,
+    });
+  } catch (error) {
+    console.error(
+      "Error inspecting TeamFeePay report:",
+      error
+    );
+
+    res.status(500).json({
+      error: "Unable to inspect TeamFeePay report.",
     });
   }
 });

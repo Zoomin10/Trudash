@@ -1,5 +1,6 @@
 const msal = require("@azure/msal-node");
 require("dotenv").config();
+const XLSX = require("xlsx");
 
 const msalConfig = {
   auth: {
@@ -373,7 +374,36 @@ async function getTeamFeePayReports() {
     }));
 }
 
+async function getTeamFeePayWorkbook(fileId) {
+  const documentsLibrary = await getDocumentsLibrary();
+  const accessToken = await getAccessToken();
 
+  const url =
+    `https://graph.microsoft.com/v1.0/drives/${documentsLibrary.id}` +
+    `/items/${fileId}/content`;
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+
+    throw new Error(
+      `Unable to download TeamFeePay workbook: ${response.status} ${errorText}`
+    );
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  return XLSX.read(buffer, {
+    type: "buffer",
+    cellDates: true,
+  });
+}
 async function getPolicyGovernanceSummary() {
   const policies = await getAllPolicyMetadata();
 
@@ -406,4 +436,5 @@ module.exports = {
   getPolicyGovernanceSummary,
   getDocumentCategorySummary,
   getTeamFeePayReports,
+  getTeamFeePayWorkbook,
 };
