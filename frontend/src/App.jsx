@@ -1062,7 +1062,7 @@ if (!auth.authenticated) {
 )}
 
 
-{/* Registration */}
+
 {/* Registration */}
 {currentTab === "registration" && (
   <>
@@ -1078,14 +1078,14 @@ if (!auth.authenticated) {
         </div>
 
         <div className="module-description">
-          FA registration confirmed
+          FA registration confirmed in TeamFeePay
         </div>
       </div>
 
 
       <div className="module-card">
         <div className="module-title">
-          FA Registration Attention
+          Needs Attention
         </div>
 
         <div className="module-value">
@@ -1096,78 +1096,24 @@ if (!auth.authenticated) {
         </div>
 
         <div className="module-description">
-          Registration not confirmed as Registered
+          FA registration not confirmed in TeamFeePay
         </div>
       </div>
 
+    </section>
 
-      <div className="module-card">
-        <div className="module-title">
-          Selected
-        </div>
-
-        <div className="module-value">
-          {membersSummary?.faRegistrationStatus?.Selected ?? 0}
-        </div>
-
-        <div className="module-description">
-          Selected but not yet FA Registered
-        </div>
+    <section className="panel">
+      <div className="panel-header">
+        <h2>FA Registration Overview</h2>
+        <p>
+          Players are shown as FA Registered where the member details in
+          TeamFeePay are verified against the player data in FA Portal 
+          (Name, FAN and Date of Birth).
+          Other records are flagged for attention, as they may
+          require FA registration, synchronisation or data-quality
+          checks.
+        </p>
       </div>
-
-
-      <div className="module-card">
-        <div className="module-title">
-          Cancelled
-        </div>
-
-        <div className="module-value">
-          {membersSummary?.faRegistrationStatus?.Cancelled ?? 0}
-        </div>
-
-        <div className="module-description">
-          FA registration cancelled
-        </div>
-      </div>
-
-
-      <div className="module-card">
-        <div className="module-title">
-          No FA Status
-        </div>
-
-        <div className="module-value">
-          {membersSummary
-            ? membersSummary.totalMembers -
-              Object.values(
-                membersSummary.faRegistrationStatus || {}
-              ).reduce(
-                (total, value) => total + value,
-                0
-              )
-            : "—"}
-        </div>
-
-        <div className="module-description">
-          No FA registration status recorded in this report
-        </div>
-      </div>
-
-
-      <div className="module-card">
-        <div className="module-title">
-          TeamFeePay Eligible Flag
-        </div>
-
-        <div className="module-value">
-          {membersSummary?.eligibleToPlay?.true ?? 0}
-        </div>
-
-        <div className="module-description">
-          TeamFeePay platform flag — not confirmation of FA eligibility
-        </div>
-      </div>
-
     </section>
   </>
 )}
