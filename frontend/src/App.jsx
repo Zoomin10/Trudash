@@ -55,7 +55,7 @@ const [currentTab, setCurrentTab] = useState("policies");
 const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 const [documentationSummary, setDocumentationSummary] = useState(null);
 const [membersSummary, setMembersSummary] = useState(null);
-
+const [agreementsSummary, setAgreementsSummary] = useState(null);
 const [auth, setAuth] = useState({
   loading: true,
   authenticated: false,
@@ -148,6 +148,28 @@ useEffect(() => {
       );
     });
 }, [auth.authenticated]);
+
+useEffect(() => {
+  if (!authChecked || !user) return;
+
+  fetch("/api/members/agreements")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to load agreements");
+      }
+
+      return response.json();
+    })
+    .then((data) => {
+      setAgreementsSummary(data);
+    })
+    .catch((error) => {
+      console.error(
+        "Failed to load agreement summary:",
+        error
+      );
+    });
+}, [authChecked, user]);
 
 useEffect(() => {
   async function checkAuthentication() {
