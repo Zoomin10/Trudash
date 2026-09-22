@@ -54,6 +54,7 @@ const [currentSection, setCurrentSection] = useState("overview");
 const [currentTab, setCurrentTab] = useState("policies");
 const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 const [documentationSummary, setDocumentationSummary] = useState(null);
+const [membersSummary, setMembersSummary] = useState(null);
 
 const [auth, setAuth] = useState({
   loading: true,
@@ -124,6 +125,28 @@ useEffect(() => {
   }
 
   loadDocumentationSummary();
+}, [auth.authenticated]);
+
+useEffect(() => {
+  if (!auth.authenticated) return;
+
+  fetch("/api/members/summary")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Unable to load member summary");
+      }
+
+      return response.json();
+    })
+    .then((data) => {
+      setMembersSummary(data);
+    })
+    .catch((error) => {
+      console.error(
+        "Error loading member summary:",
+        error
+      );
+    });
 }, [auth.authenticated]);
 
 useEffect(() => {
