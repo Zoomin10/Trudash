@@ -995,8 +995,18 @@ if (!auth.authenticated) {
 
       <div className="module-card">
         <div className="module-title">
-          Future Collections (This FY)
+          Future Collections (this FY)
         </div>
+
+
+        <div className="module-value">
+          {membersSummary?.payments?.collectionsPending ?? "—"}
+        </div>
+
+        <div className="module-description">
+          Scheduled / pending collections
+        </div>
+      </div>
 
 <div className="module-card">
   <div className="module-title">
@@ -1026,15 +1036,6 @@ if (!auth.authenticated) {
     Memberships with a discount applied
   </div>
 </div>
-
-        <div className="module-value">
-          {membersSummary?.payments?.collectionsPending ?? "—"}
-        </div>
-
-        <div className="module-description">
-          Scheduled / pending collections
-        </div>
-      </div>
 
     </section>
 
