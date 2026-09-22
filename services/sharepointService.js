@@ -339,6 +339,41 @@ async function getDocumentCategorySummary(folderPath) {
   };
 }
 
+async function getTeamFeePayReports() {
+  const documentsLibrary = await getDocumentsLibrary();
+
+  const url =
+    `https://graph.microsoft.com/v1.0/drives/${documentsLibrary.id}` +
+    `/root:/TeamFeePay Reports:/children`;
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${await getAccessToken()}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Unable to retrieve TeamFeePay reports: ${response.status} ${errorText}`
+    );
+  }
+
+  const data = await response.json();
+
+  return data.value
+    .filter((item) => item.file)
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      webUrl: item.webUrl,
+      size: item.size,
+      createdDateTime: item.createdDateTime,
+      lastModifiedDateTime: item.lastModifiedDateTime,
+    }));
+}
+
+
 async function getPolicyGovernanceSummary() {
   const policies = await getAllPolicyMetadata();
 
@@ -370,4 +405,5 @@ module.exports = {
   getAllPolicyMetadata,
   getPolicyGovernanceSummary,
   getDocumentCategorySummary,
+  getTeamFeePayReports,
 };

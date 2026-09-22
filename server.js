@@ -6,6 +6,7 @@ const session = require("express-session");
 const {
   getPolicyGovernanceSummary,
   getDocumentCategorySummary,
+  getTeamFeePayReports,
 } = require("./services/sharepointService");
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -276,6 +277,23 @@ app.get("/api/documentation/:category", requireAuth, async (req, res) => {
 
     res.status(500).json({
       error: "Unable to retrieve documentation.",
+    });
+  }
+});
+
+app.get("/api/members/reports", requireAuth, async (req, res) => {
+  try {
+    const reports = await getTeamFeePayReports();
+
+    res.json({
+      total: reports.length,
+      reports,
+    });
+  } catch (error) {
+    console.error("Error retrieving TeamFeePay reports:", error);
+
+    res.status(500).json({
+      error: "Unable to retrieve TeamFeePay reports.",
     });
   }
 });
