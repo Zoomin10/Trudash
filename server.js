@@ -318,27 +318,23 @@ app.get("/api/members/inspect", requireAuth, async (req, res) => {
       seasonReport.id
     );
 
-    const sheets = workbook.SheetNames.map((sheetName) => {
-      const worksheet = workbook.Sheets[sheetName];
+    const sheetName = "2026-2027 Season";
+    const worksheet = workbook.Sheets[sheetName];
 
-      const rows = XLSX.utils.sheet_to_json(worksheet, {
-        defval: null,
-      });
-
-      return {
-        name: sheetName,
-        rowCount: rows.length,
-        columns:
-          rows.length > 0
-            ? Object.keys(rows[0])
-            : [],
-      };
+    const rows = XLSX.utils.sheet_to_json(worksheet, {
+      header: 1,
+      defval: null,
+      blankrows: false,
     });
+
+    const headerRows = rows.slice(0, 4);
 
     res.json({
       report: seasonReport.name,
-      sheets,
+      sheet: sheetName,
+      headerRows,
     });
+
   } catch (error) {
     console.error(
       "Error inspecting TeamFeePay report:",
