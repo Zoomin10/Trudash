@@ -862,22 +862,7 @@ if (!auth.authenticated) {
   </>
 )}
 {/* Placeholder for Members tabs not yet built */}
-{currentTab !== "overview" &&
-  currentTab !== "teams" &&
-  currentTab !== "payments" &&
-  currentTab !== "registration" && (
-    <section className="panel">
-      <div className="panel-header">
-        <h2>
-          {currentTab === "agreements" && "Agreements"}
-        </h2>
 
-        <p>
-          TeamFeePay data will be displayed here.
-        </p>
-      </div>
-    </section>
-  )}
 
 
 {/* Teams */}
@@ -1144,7 +1129,60 @@ if (!auth.authenticated) {
 
 
 
+{/* Agreements */}
+{currentTab === "agreements" && (
+  <>
+    <section className="panel">
+      <div className="panel-header">
+        <h2>Member Agreements</h2>
+        <p>
+          Current acceptance status of club membership terms and
+          codes of conduct recorded in TeamFeePay.
+        </p>
+      </div>
 
+      {!agreementsSummary ? (
+        <p>Loading agreement data...</p>
+      ) : (
+        <div className="policy-table-wrapper">
+          <table className="policy-table">
+            <thead>
+              <tr>
+                <th>Agreement</th>
+                <th>Signed</th>
+                <th>Pending</th>
+                <th>Completion</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {agreementsSummary.agreements.map((agreement) => (
+                <tr key={agreement.documentName}>
+                  <td>{agreement.documentName}</td>
+                  <td>{agreement.signed}</td>
+                  <td>{agreement.pending}</td>
+                  <td>{agreement.completionPercentage}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+
+    <section className="panel">
+      <div className="panel-header">
+        <h2>Agreement Overview</h2>
+        <p>
+          Pending agreements identify records where TeamFeePay
+          has not recorded acceptance of the relevant document.
+          Newly introduced agreements may have a lower completion
+          rate while they are being rolled out to members.
+        </p>
+      </div>
+    </section>
+  </>
+)}
 
         {/* =====================================================
             PLACEHOLDER SECTIONS
