@@ -455,52 +455,124 @@ async function getTeamFeePaySeasonSummary() {
     return -1;
   };
 
-  const columns = {
-    memberFirstName: getColumnIndex("First Name", 1),
-    memberLastName: getColumnIndex("Last Name", 1),
-    dateOfBirth: getColumnIndex("Date of Birth", 1),
-    team: getColumnIndex("Team"),
-    memberStatus: getColumnIndex("Status"),
-    paymentStatus: getColumnIndex("Payment Status"),
-    gender: getColumnIndex("Gender"),
-    faRegistrationStatus: getColumnIndex(
-      "FA Registration Status"
-    ),
-    eligibleToPlay: getColumnIndex(
-      "Eligible to play in games"
-    ),
-    totalPaidByUsers: getColumnIndex("Total Paid By User(s)"),
-totalClubReceived: getColumnIndex("Total Club has Received"),
-totalClubOverdue: getColumnIndex("Total Club Amount Overdue"),
-totalClubDue: getColumnIndex("Total Club Amount Due"),
-collectionsPaid: getColumnIndex("Collections Paid"),
-collectionsOverdue: getColumnIndex("Collections Overdue"),
-collectionsPending: getColumnIndex("Collections Pending"),
-  };
+ const columns = {
+  memberFirstName: getColumnIndex("First Name", 1),
+  memberLastName: getColumnIndex("Last Name", 1),
+  dateOfBirth: getColumnIndex("Date of Birth", 1),
+  team: getColumnIndex("Team"),
+  memberStatus: getColumnIndex("Status"),
+  paymentStatus: getColumnIndex("Payment Status"),
+  gender: getColumnIndex("Gender"),
 
-  const members = dataRows.filter(
-    (row) =>
-      row[columns.memberFirstName] ||
-      row[columns.memberLastName]
+  faRegistrationStatus: getColumnIndex(
+    "FA Registration Status"
+  ),
+
+  eligibleToPlay: getColumnIndex(
+    "Eligible to play in games"
+  ),
+
+  totalPaidByUsers: getColumnIndex(
+    "Total Paid By User(s)"
+  ),
+
+  totalClubReceived: getColumnIndex(
+    "Total Club has Received"
+  ),
+
+  totalClubOverdue: getColumnIndex(
+    "Total Club Amount Overdue"
+  ),
+
+  totalClubDue: getColumnIndex(
+    "Total Club Amount Due"
+  ),
+
+  collectionsPaid: getColumnIndex(
+    "Collections Paid"
+  ),
+
+  collectionsOverdue: getColumnIndex(
+    "Collections Overdue"
+  ),
+
+  collectionsPending: getColumnIndex(
+    "Collections Pending"
+  ),
+
+  discountName: getColumnIndex("Discount name"),
+  discount: getColumnIndex("Discount"),
+
+  reasonForDiscount: getColumnIndex(
+    "Reason for discount"
+  ),
+};
+
+
+const members = dataRows.filter(
+  (row) =>
+    row[columns.memberFirstName] ||
+    row[columns.memberLastName]
+);
+
+
+const countByValue = (columnIndex) => {
+  const counts = {};
+
+  members.forEach((row) => {
+    const value = row[columnIndex];
+
+    if (
+      value !== null &&
+      value !== undefined &&
+      value !== ""
+    ) {
+      const key = String(value).trim();
+
+      counts[key] = (counts[key] || 0) + 1;
+    }
+  });
+
+  return counts;
+};
+
+
+const sumColumn = (columnIndex) => {
+  return members.reduce((total, row) => {
+    const value = Number(row[columnIndex]);
+
+    return total + (
+      Number.isFinite(value) ? value : 0
+    );
+  }, 0);
+};
+
+
+const discountedMembers = members.filter((row) => {
+  const discountName = row[columns.discountName];
+  const discount = Number(row[columns.discount]);
+
+  return (
+    (
+      discountName &&
+      String(discountName).trim() !== ""
+    ) ||
+    (
+      Number.isFinite(discount) &&
+      discount !== 0
+    )
   );
+});
 
-  const countByValue = (columnIndex) => {
-    const counts = {};
 
-    members.forEach((row) => {
-      const value = row[columnIndex];
+const discounts = {
+  discountedMembers: discountedMembers.length,
+  totalDiscount: sumColumn(columns.discount),
+  discountTypes: countByValue(columns.discountName),
+};
 
-      if (value !== null && value !== undefined && value !== "") {
-        const key = String(value).trim();
 
-        counts[key] = (counts[key] || 0) + 1;
-      }
-    });
-
-    return counts;
-  };
-
-  const teamCounts = {};
+const teamCounts = {};
 
 members.forEach((row) => {
   const teamValue = row[columns.team];
@@ -513,17 +585,10 @@ members.forEach((row) => {
     .filter(Boolean);
 
   teams.forEach((team) => {
-    teamCounts[team] = (teamCounts[team] || 0) + 1;
+    teamCounts[team] =
+      (teamCounts[team] || 0) + 1;
   });
 });
-const sumColumn = (columnIndex) => {
-  return members.reduce((total, row) => {
-    const value = Number(row[columnIndex]);
-
-    return total + (Number.isFinite(value) ? value : 0);
-  }, 0);
-};
-
 const payments = {
   totalPaidByUsers: sumColumn(columns.totalPaidByUsers),
   totalClubReceived: sumColumn(columns.totalClubReceived),
@@ -556,7 +621,9 @@ const payments = {
     ),
 
     payments,
-    
+
+    discounts,
+
     faRegistrationStatus: countByValue(
       columns.faRegistrationStatus
     ),
