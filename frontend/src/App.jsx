@@ -1038,6 +1038,107 @@ if (!auth.authenticated) {
   </div>
 </div>
 
+{currentTab === "registration" && (
+  <>
+    <section className="module-grid">
+
+      <div className="module-card">
+        <div className="module-title">
+          FA Registered
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.faRegistrationStatus?.Registered ?? 0}
+        </div>
+
+        <div className="module-description">
+          Registered with The FA
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Selected
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.faRegistrationStatus?.Selected ?? 0}
+        </div>
+
+        <div className="module-description">
+          Awaiting completion of FA registration
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Cancelled
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.faRegistrationStatus?.Cancelled ?? 0}
+        </div>
+
+        <div className="module-description">
+          FA registration cancelled
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          No FA Status
+        </div>
+
+        <div className="module-value">
+          {membersSummary
+            ? membersSummary.totalMembers -
+              Object.values(
+                membersSummary.faRegistrationStatus || {}
+              ).reduce(
+                (total, value) => total + value,
+                0
+              )
+            : "—"}
+        </div>
+
+        <div className="module-description">
+          No FA registration status recorded
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Eligible to Play
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.eligibleToPlay?.true ?? 0}
+        </div>
+
+        <div className="module-description">
+          Marked eligible in TeamFeePay
+        </div>
+      </div>
+
+    </section>
+
+    <section className="panel">
+      <div className="panel-header">
+        <h2>FA Registration</h2>
+
+        <p>
+          Current player registration and playing eligibility
+          recorded in the latest TeamFeePay season report.
+        </p>
+      </div>
+    </section>
+  </>
+)}
+
     </section>
 
     <section className="panel">
