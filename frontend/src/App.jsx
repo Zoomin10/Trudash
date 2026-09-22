@@ -839,29 +839,31 @@ if (!auth.authenticated) {
     </section>
   </>
 )}
+{/* Placeholder for Members tabs not yet built */}
 {currentTab !== "overview" &&
   currentTab !== "teams" &&
   currentTab !== "payments" &&
   currentTab !== "registration" && (
-  <section className="panel">
-    <div className="panel-header">
-      <h2>
-        {currentTab === "teams" && "Teams"}
-        {currentTab === "payments" && "Payments"}
-        {currentTab === "registration" && "Registration"}
-        {currentTab === "agreements" && "Agreements"}
-      </h2>
+    <section className="panel">
+      <div className="panel-header">
+        <h2>
+          {currentTab === "agreements" && "Agreements"}
+        </h2>
 
-      <p>
-        TeamFeePay data will be displayed here.
-      </p>
-    </div>
-  </section>
-)}
+        <p>
+          TeamFeePay data will be displayed here.
+        </p>
+      </div>
+    </section>
+  )}
+
+
+{/* Teams */}
 {currentTab === "teams" && (
   <section className="panel">
     <div className="panel-header">
       <h2>Team Membership</h2>
+
       <p>
         Current squad sizes from the latest TeamFeePay
         season report.
@@ -906,6 +908,9 @@ if (!auth.authenticated) {
     </div>
   </section>
 )}
+
+
+{/* Payments */}
 {currentTab === "payments" && (
   <>
     <section className="module-grid">
@@ -999,7 +1004,6 @@ if (!auth.authenticated) {
           Future Collections (this FY)
         </div>
 
-
         <div className="module-value">
           {membersSummary?.payments?.collectionsPending ?? "—"}
         </div>
@@ -1009,35 +1013,55 @@ if (!auth.authenticated) {
         </div>
       </div>
 
-<div className="module-card">
-  <div className="module-title">
-    Paused Memberships
-  </div>
 
-  <div className="module-value">
-    {membersSummary?.membershipStatus?.Paused ?? 0}
-  </div>
+      <div className="module-card">
+        <div className="module-title">
+          Paused Memberships
+        </div>
 
-  <div className="module-description">
-    Memberships currently paused
-  </div>
-</div>
+        <div className="module-value">
+          {membersSummary?.membershipStatus?.Paused ?? 0}
+        </div>
+
+        <div className="module-description">
+          Memberships currently paused
+        </div>
+      </div>
 
 
-<div className="module-card">
-  <div className="module-title">
-    Discounted Memberships
-  </div>
+      <div className="module-card">
+        <div className="module-title">
+          Discounted Memberships
+        </div>
 
-  <div className="module-value">
-    {membersSummary?.discounts?.discountedMembers ?? 0}
-  </div>
+        <div className="module-value">
+          {membersSummary?.discounts?.discountedMembers ?? 0}
+        </div>
 
-  <div className="module-description">
-    Memberships with a discount applied
-  </div>
-</div>
+        <div className="module-description">
+          Memberships with a discount applied
+        </div>
+      </div>
 
+    </section>
+
+
+    <section className="panel">
+      <div className="panel-header">
+        <h2>Payment Overview</h2>
+
+        <p>
+          Current subscription collection position from
+          TeamFeePay. Pending collections include future
+          scheduled payments and are not treated as overdue debt.
+        </p>
+      </div>
+    </section>
+  </>
+)}
+
+
+{/* Registration */}
 {currentTab === "registration" && (
   <>
     <section className="module-grid">
@@ -1126,37 +1150,15 @@ if (!auth.authenticated) {
 
     </section>
 
-    <section className="panel">
-      <div className="panel-header">
-        <h2>FA Registration</h2>
 
-        <p>
-          Current player registration and playing eligibility
-          recorded in the latest TeamFeePay season report.
-        </p>
-      </div>
-    </section>
+    
   </>
 )}
+   
 
-    </section>
 
-    <section className="panel">
-      <div className="panel-header">
-        <h2>Payment Overview</h2>
 
-        <p>
-          Current subscription collection position from
-          TeamFeePay. Pending collections include future
-          scheduled payments and are not treated as overdue debt.
-        </p>
-      </div>
-    </section>
-  </>
-)}
 
-  </>
-)}
 
         {/* =====================================================
             PLACEHOLDER SECTIONS
