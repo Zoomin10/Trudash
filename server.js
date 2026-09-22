@@ -2,13 +2,13 @@ require("dotenv").config();
 
 const express = require("express");
 const path = require("path");
-const XLSX = require("xlsx");
+
 const session = require("express-session");
 const {
   getPolicyGovernanceSummary,
   getDocumentCategorySummary,
   getTeamFeePayReports,
-  getTeamFeePayWorkbook,
+  getTeamFeePaySeasonSummary,
 } = require("./services/sharepointService");
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -300,49 +300,19 @@ app.get("/api/members/reports", requireAuth, async (req, res) => {
   }
 });
 
-app.get("/api/members/inspect", requireAuth, async (req, res) => {
+app.get("/api/members/summary", requireAuth, async (req, res) => {
   try {
-    const reports = await getTeamFeePayReports();
+    const summary = await getTeamFeePaySeasonSummary();
 
-    const seasonReport = reports.find((report) =>
-      report.name.includes("Season_Report")
-    );
-
-    if (!seasonReport) {
-      return res.status(404).json({
-        error: "Season Report not found.",
-      });
-    }
-
-    const workbook = await getTeamFeePayWorkbook(
-      seasonReport.id
-    );
-
-    const sheetName = "2026-2027 Season";
-    const worksheet = workbook.Sheets[sheetName];
-
-    const rows = XLSX.utils.sheet_to_json(worksheet, {
-      header: 1,
-      defval: null,
-      blankrows: false,
-    });
-
-    const headerRows = rows.slice(0, 4);
-
-    res.json({
-      report: seasonReport.name,
-      sheet: sheetName,
-      headerRows,
-    });
-
+    res.json(summary);
   } catch (error) {
     console.error(
-      "Error inspecting TeamFeePay report:",
+      "Error retrieving TeamFeePay member summary:",
       error
     );
 
     res.status(500).json({
-      error: "Unable to inspect TeamFeePay report.",
+      error: "Unable to retrieve member summary.",
     });
   }
 });
