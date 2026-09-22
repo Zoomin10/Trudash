@@ -150,7 +150,7 @@ useEffect(() => {
 }, [auth.authenticated]);
 
 useEffect(() => {
-  if (!authChecked || !user) return;
+ if (!user) return;
 
   fetch("/api/members/agreements")
     .then((response) => {
@@ -169,7 +169,7 @@ useEffect(() => {
         error
       );
     });
-}, [authChecked, user]);
+}, [user]);
 
 useEffect(() => {
   async function checkAuthentication() {
