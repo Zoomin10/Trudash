@@ -469,6 +469,13 @@ async function getTeamFeePaySeasonSummary() {
     eligibleToPlay: getColumnIndex(
       "Eligible to play in games"
     ),
+    totalPaidByUsers: getColumnIndex("Total Paid By User(s)"),
+totalClubReceived: getColumnIndex("Total Club has Received"),
+totalClubOverdue: getColumnIndex("Total Club Amount Overdue"),
+totalClubDue: getColumnIndex("Total Club Amount Due"),
+collectionsPaid: getColumnIndex("Collections Paid"),
+collectionsOverdue: getColumnIndex("Collections Overdue"),
+collectionsPending: getColumnIndex("Collections Pending"),
   };
 
   const members = dataRows.filter(
@@ -509,6 +516,23 @@ members.forEach((row) => {
     teamCounts[team] = (teamCounts[team] || 0) + 1;
   });
 });
+const sumColumn = (columnIndex) => {
+  return members.reduce((total, row) => {
+    const value = Number(row[columnIndex]);
+
+    return total + (Number.isFinite(value) ? value : 0);
+  }, 0);
+};
+
+const payments = {
+  totalPaidByUsers: sumColumn(columns.totalPaidByUsers),
+  totalClubReceived: sumColumn(columns.totalClubReceived),
+  totalClubOverdue: sumColumn(columns.totalClubOverdue),
+  totalClubDue: sumColumn(columns.totalClubDue),
+  collectionsPaid: sumColumn(columns.collectionsPaid),
+  collectionsOverdue: sumColumn(columns.collectionsOverdue),
+  collectionsPending: sumColumn(columns.collectionsPending),
+};
 
   return {
     source: {
@@ -531,6 +555,8 @@ members.forEach((row) => {
       columns.paymentStatus
     ),
 
+    payments,
+    
     faRegistrationStatus: countByValue(
       columns.faRegistrationStatus
     ),
