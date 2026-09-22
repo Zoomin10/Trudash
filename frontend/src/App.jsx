@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "./App.css";
 import DocumentRegister from "./components/DocumentRegister";
 
+
 const documentationCategories = {
   policies: {
     apiCategory: "policies",
@@ -53,6 +54,7 @@ const [currentSection, setCurrentSection] = useState("overview");
 const [currentTab, setCurrentTab] = useState("policies");
 const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 const [documentationSummary, setDocumentationSummary] = useState(null);
+const [membersSummary, setMembersSummary] = useState(null);
 
 const [auth, setAuth] = useState({
   loading: true,
@@ -123,6 +125,28 @@ useEffect(() => {
   }
 
   loadDocumentationSummary();
+}, [auth.authenticated]);
+
+useEffect(() => {
+  if (!auth.authenticated) return;
+
+  fetch("/api/members/summary")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Unable to load member summary");
+      }
+
+      return response.json();
+    })
+    .then((data) => {
+      setMembersSummary(data);
+    })
+    .catch((error) => {
+      console.error(
+        "Error loading member summary:",
+        error
+      );
+    });
 }, [auth.authenticated]);
 
 useEffect(() => {
@@ -263,6 +287,19 @@ if (!auth.authenticated) {
           }}
         >
           Documentation
+        </button>
+
+<button
+          className={`nav-item ${
+            currentSection === "members" ? "active" : ""
+          }`}
+          onClick={() => {
+            setCurrentSection("members");
+            setCurrentTab("overview");
+            setMobileMenuOpen(false);
+          }}
+        >
+          Members
         </button>
 
         <button
@@ -642,13 +679,458 @@ if (!auth.authenticated) {
           </>
         )}
 
+{/* =====================================================
+    MEMBERS
+====================================================== */}
+
+{currentSection === "members" && (
+  <>
+    <div className="section-heading">
+      <h2>Members</h2>
+      <p>
+        Membership, registration, payment and agreement oversight.
+      </p>
+    </div>
+
+    <div className="section-tabs">
+
+      <button
+        className={`section-tab ${
+          currentTab === "overview" ? "active" : ""
+        }`}
+        onClick={() => setCurrentTab("overview")}
+      >
+        Overview
+      </button>
+
+      <button
+        className={`section-tab ${
+          currentTab === "teams" ? "active" : ""
+        }`}
+        onClick={() => setCurrentTab("teams")}
+      >
+        Teams
+      </button>
+
+      <button
+        className={`section-tab ${
+          currentTab === "payments" ? "active" : ""
+        }`}
+        onClick={() => setCurrentTab("payments")}
+      >
+        Payments
+      </button>
+
+      <button
+        className={`section-tab ${
+          currentTab === "registration" ? "active" : ""
+        }`}
+        onClick={() => setCurrentTab("registration")}
+      >
+        Registration
+      </button>
+
+      <button
+        className={`section-tab ${
+          currentTab === "agreements" ? "active" : ""
+        }`}
+        onClick={() => setCurrentTab("agreements")}
+      >
+        Agreements
+      </button>
+
+    </div>
+
+    {currentTab === "overview" && (
+  <>
+    <section className="module-grid">
+
+      <div className="module-card">
+        <div className="module-title">
+          Active Members
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.membershipStatus?.Active ?? "—"}
+        </div>
+
+        <div className="module-description">
+          {membersSummary
+            ? `${membersSummary.totalMembers} total records`
+            : "Loading membership data"}
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Teams
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.teams
+            ? Object.keys(membersSummary.teams).length
+            : "—"}
+        </div>
+
+        <div className="module-description">
+          TeamFeePay team assignments
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Female Players
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.gender?.Female ?? "—"}
+        </div>
+
+        <div className="module-description">
+          {membersSummary?.gender?.Male !== undefined
+            ? `${membersSummary.gender.Male} male players`
+            : "Membership profile"}
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          FA Registered
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.faRegistrationStatus?.Registered ?? "—"}
+        </div>
+
+        <div className="module-description">
+          Registered with The FA
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Payments Up to Date
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.paymentStatus?.["Up to date"] ?? "—"}
+        </div>
+
+        <div className="module-description">
+          Current TeamFeePay status
+        </div>
+      </div>
+
+    </section>
+
+    <section className="panel">
+      <div className="panel-header">
+        <h2>Membership Overview</h2>
+
+        <p>
+          Current membership position from the latest
+          TeamFeePay season report.
+        </p>
+      </div>
+    </section>
+  </>
+)}
+{/* Placeholder for Members tabs not yet built */}
+{currentTab !== "overview" &&
+  currentTab !== "teams" &&
+  currentTab !== "payments" &&
+  currentTab !== "registration" && (
+    <section className="panel">
+      <div className="panel-header">
+        <h2>
+          {currentTab === "agreements" && "Agreements"}
+        </h2>
+
+        <p>
+          TeamFeePay data will be displayed here.
+        </p>
+      </div>
+    </section>
+  )}
+
+
+{/* Teams */}
+{currentTab === "teams" && (
+  <section className="panel">
+    <div className="panel-header">
+      <h2>Team Membership</h2>
+
+      <p>
+        Current squad sizes from the latest TeamFeePay
+        season report.
+      </p>
+    </div>
+
+    <div className="policy-table-wrapper">
+      <table className="policy-table">
+        <thead>
+          <tr>
+            <th>Team</th>
+            <th>Players</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {membersSummary?.teams &&
+            Object.entries(membersSummary.teams)
+              .sort((a, b) =>
+                a[0].localeCompare(b[0])
+              )
+              .map(([team, count]) => (
+                <tr key={team}>
+                  <td>
+                    {team
+                      .replace(
+                        "Wroughton & Wichelstowe FC",
+                        ""
+                      )
+                      .replace(
+                        "Wroughton and Wichelstowe FC",
+                        ""
+                      )
+                      .trim()}
+                  </td>
+
+                  <td>{count}</td>
+                </tr>
+              ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+)}
+
+
+
+{/* Payments */}
+{currentTab === "payments" && (
+  <>
+    <section className="module-grid">
+
+      <div className="module-card">
+        <div className="module-title">
+          Club Received
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.payments
+            ? `£${membersSummary.payments.totalClubReceived.toLocaleString(
+                "en-GB",
+                {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }
+              )}`
+            : "—"}
+        </div>
+
+        <div className="module-description">
+          Net amount received by WWFC
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Paid by Members
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.payments
+            ? `£${membersSummary.payments.totalPaidByUsers.toLocaleString(
+                "en-GB",
+                {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }
+              )}`
+            : "—"}
+        </div>
+
+        <div className="module-description">
+          Gross payments collected
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Overdue
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.payments
+            ? `£${membersSummary.payments.totalClubOverdue.toLocaleString(
+                "en-GB",
+                {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }
+              )}`
+            : "—"}
+        </div>
+
+        <div className="module-description">
+          Currently overdue to the club
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Collections Paid
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.payments?.collectionsPaid ?? "—"}
+        </div>
+
+        <div className="module-description">
+          Completed collections
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Future Collections (this FY)
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.payments?.collectionsPending ?? "—"}
+        </div>
+
+        <div className="module-description">
+          Scheduled / pending collections
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Paused Memberships
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.membershipStatus?.Paused ?? 0}
+        </div>
+
+        <div className="module-description">
+          Memberships currently paused
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Discounted Memberships
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.discounts?.discountedMembers ?? 0}
+        </div>
+
+        <div className="module-description">
+          Memberships with a discount applied
+        </div>
+      </div>
+
+    </section>
+
+
+    <section className="panel">
+      <div className="panel-header">
+        <h2>Payment Overview</h2>
+
+        <p>
+          Current subscription collection position from
+          TeamFeePay. Pending collections include future
+          scheduled payments and are not treated as overdue debt.
+        </p>
+      </div>
+    </section>
+  </>
+)}
+
+
+
+{/* Registration */}
+{currentTab === "registration" && (
+  <>
+    <section className="module-grid">
+
+      <div className="module-card">
+        <div className="module-title">
+          FA Registered
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.faRegistrationStatus?.Registered ?? 0}
+        </div>
+
+        <div className="module-description">
+          FA registration confirmed in TeamFeePay
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Needs Attention
+        </div>
+
+        <div className="module-value">
+          {membersSummary
+            ? membersSummary.totalMembers -
+              (membersSummary.faRegistrationStatus?.Registered ?? 0)
+            : "—"}
+        </div>
+
+        <div className="module-description">
+          FA registration not confirmed in TeamFeePay
+        </div>
+      </div>
+
+    </section>
+
+    <section className="panel">
+      <div className="panel-header">
+        <h2>FA Registration Overview</h2>
+        <p>
+          Players are shown as FA Registered where the member details in
+          TeamFeePay are verified against the player data in FA Portal 
+          (Name, FAN and Date of Birth).
+          Other records are flagged for attention, as they may
+          require FA registration, synchronisation or data-quality
+          checks.
+        </p>
+      </div>
+    </section>
+  </>
+)}
+     </>
+)}
+
+
+
+
 
         {/* =====================================================
             PLACEHOLDER SECTIONS
         ====================================================== */}
 
-        {currentSection !== "overview" &&
-          currentSection !== "documentation" && (
+       {currentSection !== "overview" &&
+  currentSection !== "documentation" &&
+  currentSection !== "members" && (
             <>
 
               <div className="section-heading">

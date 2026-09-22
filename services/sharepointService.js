@@ -1,5 +1,6 @@
 const msal = require("@azure/msal-node");
 require("dotenv").config();
+const XLSX = require("xlsx");
 
 const msalConfig = {
   auth: {
@@ -339,6 +340,302 @@ async function getDocumentCategorySummary(folderPath) {
   };
 }
 
+async function getTeamFeePayReports() {
+  const documentsLibrary = await getDocumentsLibrary();
+
+  const url =
+    `https://graph.microsoft.com/v1.0/drives/${documentsLibrary.id}` +
+    `/root:/TeamFeePay Reports:/children`;
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${await getAccessToken()}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Unable to retrieve TeamFeePay reports: ${response.status} ${errorText}`
+    );
+  }
+
+  const data = await response.json();
+
+  return data.value
+    .filter((item) => item.file)
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      webUrl: item.webUrl,
+      size: item.size,
+      createdDateTime: item.createdDateTime,
+      lastModifiedDateTime: item.lastModifiedDateTime,
+    }));
+}
+
+async function getTeamFeePayWorkbook(fileId) {
+  const documentsLibrary = await getDocumentsLibrary();
+  const accessToken = await getAccessToken();
+
+  const url =
+    `https://graph.microsoft.com/v1.0/drives/${documentsLibrary.id}` +
+    `/items/${fileId}/content`;
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+
+    throw new Error(
+      `Unable to download TeamFeePay workbook: ${response.status} ${errorText}`
+    );
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  return XLSX.read(buffer, {
+    type: "buffer",
+    cellDates: true,
+  });
+}
+async function getTeamFeePaySeasonSummary() {
+  const reports = await getTeamFeePayReports();
+
+  const seasonReport = reports.find((report) =>
+    report.name.includes("Season_Report")
+  );
+
+  if (!seasonReport) {
+    throw new Error("TeamFeePay Season Report not found.");
+  }
+
+  const workbook = await getTeamFeePayWorkbook(
+    seasonReport.id
+  );
+
+  const sheetName = "2026-2027 Season";
+  const worksheet = workbook.Sheets[sheetName];
+
+  if (!worksheet) {
+    throw new Error(
+      `Worksheet "${sheetName}" not found in TeamFeePay Season Report.`
+    );
+  }
+
+  const rows = XLSX.utils.sheet_to_json(worksheet, {
+    header: 1,
+    defval: null,
+    blankrows: false,
+  });
+
+  // Row 1 contains grouped headings.
+  // Row 2 contains the actual TeamFeePay column names.
+  const headers = rows[1];
+  const dataRows = rows.slice(2);
+
+  const getColumnIndex = (name, occurrence = 1) => {
+    let count = 0;
+
+    for (let i = 0; i < headers.length; i++) {
+      if (headers[i] === name) {
+        count++;
+
+        if (count === occurrence) {
+          return i;
+        }
+      }
+    }
+
+    return -1;
+  };
+
+ const columns = {
+  memberFirstName: getColumnIndex("First Name", 1),
+  memberLastName: getColumnIndex("Last Name", 1),
+  dateOfBirth: getColumnIndex("Date of Birth", 1),
+  team: getColumnIndex("Team"),
+  memberStatus: getColumnIndex("Status"),
+  paymentStatus: getColumnIndex("Payment Status"),
+  gender: getColumnIndex("Gender"),
+
+  faRegistrationStatus: getColumnIndex(
+    "FA Registration Status"
+  ),
+
+  eligibleToPlay: getColumnIndex(
+    "Eligible to play in games"
+  ),
+
+  totalPaidByUsers: getColumnIndex(
+    "Total Paid By User(s)"
+  ),
+
+  totalClubReceived: getColumnIndex(
+    "Total Club has Received"
+  ),
+
+  totalClubOverdue: getColumnIndex(
+    "Total Club Amount Overdue"
+  ),
+
+  totalClubDue: getColumnIndex(
+    "Total Club Amount Due"
+  ),
+
+  collectionsPaid: getColumnIndex(
+    "Collections Paid"
+  ),
+
+  collectionsOverdue: getColumnIndex(
+    "Collections Overdue"
+  ),
+
+  collectionsPending: getColumnIndex(
+    "Collections Pending"
+  ),
+
+  discountName: getColumnIndex("Discount name"),
+  discount: getColumnIndex("Discount"),
+
+  reasonForDiscount: getColumnIndex(
+    "Reason for discount"
+  ),
+};
+
+
+const members = dataRows.filter(
+  (row) =>
+    row[columns.memberFirstName] ||
+    row[columns.memberLastName]
+);
+
+
+const countByValue = (columnIndex) => {
+  const counts = {};
+
+  members.forEach((row) => {
+    const value = row[columnIndex];
+
+    if (
+      value !== null &&
+      value !== undefined &&
+      value !== ""
+    ) {
+      const key = String(value).trim();
+
+      counts[key] = (counts[key] || 0) + 1;
+    }
+  });
+
+  return counts;
+};
+
+
+const sumColumn = (columnIndex) => {
+  return members.reduce((total, row) => {
+    const value = Number(row[columnIndex]);
+
+    return total + (
+      Number.isFinite(value) ? value : 0
+    );
+  }, 0);
+};
+
+
+const discountedMembers = members.filter((row) => {
+  const discountName = row[columns.discountName];
+  const discount = Number(row[columns.discount]);
+
+  return (
+    (
+      discountName &&
+      String(discountName).trim() !== ""
+    ) ||
+    (
+      Number.isFinite(discount) &&
+      discount !== 0
+    )
+  );
+});
+
+
+const discounts = {
+  discountedMembers: discountedMembers.length,
+  totalDiscount: sumColumn(columns.discount),
+  discountTypes: countByValue(columns.discountName),
+};
+
+
+const teamCounts = {};
+
+members.forEach((row) => {
+  const teamValue = row[columns.team];
+
+  if (!teamValue) return;
+
+  const teams = String(teamValue)
+    .split(",")
+    .map((team) => team.trim())
+    .filter(Boolean);
+
+  teams.forEach((team) => {
+    teamCounts[team] =
+      (teamCounts[team] || 0) + 1;
+  });
+});
+const payments = {
+  totalPaidByUsers: sumColumn(columns.totalPaidByUsers),
+  totalClubReceived: sumColumn(columns.totalClubReceived),
+  totalClubOverdue: sumColumn(columns.totalClubOverdue),
+  totalClubDue: sumColumn(columns.totalClubDue),
+  collectionsPaid: sumColumn(columns.collectionsPaid),
+  collectionsOverdue: sumColumn(columns.collectionsOverdue),
+  collectionsPending: sumColumn(columns.collectionsPending),
+};
+
+  return {
+    source: {
+      fileName: seasonReport.name,
+      lastModifiedDateTime:
+        seasonReport.lastModifiedDateTime,
+    },
+
+    totalMembers: members.length,
+
+    membershipStatus: countByValue(
+      columns.memberStatus
+    ),
+
+    gender: countByValue(
+      columns.gender
+    ),
+
+    paymentStatus: countByValue(
+      columns.paymentStatus
+    ),
+
+    payments,
+
+    discounts,
+
+    faRegistrationStatus: countByValue(
+      columns.faRegistrationStatus
+    ),
+
+    eligibleToPlay: countByValue(
+      columns.eligibleToPlay
+    ),
+
+  teams: teamCounts,
+  };
+}
+
 async function getPolicyGovernanceSummary() {
   const policies = await getAllPolicyMetadata();
 
@@ -370,4 +667,7 @@ module.exports = {
   getAllPolicyMetadata,
   getPolicyGovernanceSummary,
   getDocumentCategorySummary,
+  getTeamFeePayReports,
+  getTeamFeePayWorkbook,
+  getTeamFeePaySeasonSummary,
 };

@@ -2,10 +2,13 @@ require("dotenv").config();
 
 const express = require("express");
 const path = require("path");
+
 const session = require("express-session");
 const {
   getPolicyGovernanceSummary,
   getDocumentCategorySummary,
+  getTeamFeePayReports,
+  getTeamFeePaySeasonSummary,
 } = require("./services/sharepointService");
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -276,6 +279,40 @@ app.get("/api/documentation/:category", requireAuth, async (req, res) => {
 
     res.status(500).json({
       error: "Unable to retrieve documentation.",
+    });
+  }
+});
+
+app.get("/api/members/reports", requireAuth, async (req, res) => {
+  try {
+    const reports = await getTeamFeePayReports();
+
+    res.json({
+      total: reports.length,
+      reports,
+    });
+  } catch (error) {
+    console.error("Error retrieving TeamFeePay reports:", error);
+
+    res.status(500).json({
+      error: "Unable to retrieve TeamFeePay reports.",
+    });
+  }
+});
+
+app.get("/api/members/summary", requireAuth, async (req, res) => {
+  try {
+    const summary = await getTeamFeePaySeasonSummary();
+
+    res.json(summary);
+  } catch (error) {
+    console.error(
+      "Error retrieving TeamFeePay member summary:",
+      error
+    );
+
+    res.status(500).json({
+      error: "Unable to retrieve member summary.",
     });
   }
 });
