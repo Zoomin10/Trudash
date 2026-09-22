@@ -265,6 +265,19 @@ if (!auth.authenticated) {
           Documentation
         </button>
 
+<button
+          className={`nav-item ${
+            currentSection === "members" ? "active" : ""
+          }`}
+          onClick={() => {
+            setCurrentSection("members");
+            setCurrentTab("overview");
+            setMobileMenuOpen(false);
+          }}
+        >
+          Members
+        </button>
+
         <button
           className={`nav-item ${
             currentSection === "finance" ? "active" : ""
