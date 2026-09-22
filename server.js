@@ -284,22 +284,22 @@ app.get("/api/documentation/:category", requireAuth, async (req, res) => {
   }
 });
 app.get(
-  "/api/members/agreements/inspect",
+  "/api/members/agreements",
   requireAuth,
   async (req, res) => {
     try {
-      const inspection =
-        await inspectTeamFeePayAgreementReport();
+      const summary =
+        await getTeamFeePayAgreementSummary();
 
-      res.json(inspection);
+      res.json(summary);
     } catch (error) {
       console.error(
-        "Agreement report inspection failed:",
+        "Agreement summary failed:",
         error.message
       );
 
       res.status(500).json({
-        error: "Unable to inspect TeamFeePay agreement report",
+        error: "Unable to load TeamFeePay agreement summary",
       });
     }
   }
