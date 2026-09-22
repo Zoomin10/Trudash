@@ -840,7 +840,8 @@ if (!auth.authenticated) {
   </>
 )}
 {currentTab !== "overview" &&
-  currentTab !== "teams" && (
+  currentTab !== "teams" &&
+  currentTab !== "payments" && (
   <section className="panel">
     <div className="panel-header">
       <h2>
@@ -903,6 +904,123 @@ if (!auth.authenticated) {
       </table>
     </div>
   </section>
+)}
+{currentTab === "payments" && (
+  <>
+    <section className="module-grid">
+
+      <div className="module-card">
+        <div className="module-title">
+          Club Received
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.payments
+            ? `£${membersSummary.payments.totalClubReceived.toLocaleString(
+                "en-GB",
+                {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }
+              )}`
+            : "—"}
+        </div>
+
+        <div className="module-description">
+          Net amount received by WWFC
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Paid by Members
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.payments
+            ? `£${membersSummary.payments.totalPaidByUsers.toLocaleString(
+                "en-GB",
+                {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }
+              )}`
+            : "—"}
+        </div>
+
+        <div className="module-description">
+          Gross payments collected
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Overdue
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.payments
+            ? `£${membersSummary.payments.totalClubOverdue.toLocaleString(
+                "en-GB",
+                {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }
+              )}`
+            : "—"}
+        </div>
+
+        <div className="module-description">
+          Currently overdue to the club
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Collections Paid
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.payments?.collectionsPaid ?? "—"}
+        </div>
+
+        <div className="module-description">
+          Completed collections
+        </div>
+      </div>
+
+
+      <div className="module-card">
+        <div className="module-title">
+          Future Collections
+        </div>
+
+        <div className="module-value">
+          {membersSummary?.payments?.collectionsPending ?? "—"}
+        </div>
+
+        <div className="module-description">
+          Scheduled / pending collections
+        </div>
+      </div>
+
+    </section>
+
+    <section className="panel">
+      <div className="panel-header">
+        <h2>Payment Overview</h2>
+
+        <p>
+          Current subscription collection position from
+          TeamFeePay. Pending collections include future
+          scheduled payments and are not treated as overdue debt.
+        </p>
+      </div>
+    </section>
+  </>
 )}
 
   </>
