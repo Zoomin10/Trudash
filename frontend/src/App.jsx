@@ -995,8 +995,37 @@ if (!auth.authenticated) {
 
       <div className="module-card">
         <div className="module-title">
-          Future Collections
+          Future Collections (This FY)
         </div>
+
+<div className="module-card">
+  <div className="module-title">
+    Paused Memberships
+  </div>
+
+  <div className="module-value">
+    {membersSummary?.membershipStatus?.Paused ?? 0}
+  </div>
+
+  <div className="module-description">
+    Memberships currently paused
+  </div>
+</div>
+
+
+<div className="module-card">
+  <div className="module-title">
+    Discounted Memberships
+  </div>
+
+  <div className="module-value">
+    {membersSummary?.discounts?.discountedMembers ?? 0}
+  </div>
+
+  <div className="module-description">
+    Memberships with a discount applied
+  </div>
+</div>
 
         <div className="module-value">
           {membersSummary?.payments?.collectionsPending ?? "—"}
