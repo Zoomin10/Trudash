@@ -841,7 +841,8 @@ if (!auth.authenticated) {
 )}
 {currentTab !== "overview" &&
   currentTab !== "teams" &&
-  currentTab !== "payments" && (
+  currentTab !== "payments" &&
+  currentTab !== "registration" && (
   <section className="panel">
     <div className="panel-header">
       <h2>
