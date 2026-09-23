@@ -829,9 +829,18 @@ button.document-card:hover {
 .policy-table-wrapper {
   width: 100%;
   max-width: 100%;
-    overflow-x: hidden;
-      box-sizing: border-box;
+  overflow-x: auto;
+  box-sizing: border-box;
   -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 768px) {
+  .teams-table-wrapper {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
 }
 @media (max-width: 768px) {
   .agreement-progress {
@@ -980,8 +989,7 @@ button.document-card:hover {
   .teams-table tbody {
     display: block;
     width: 100%;
-    padding: 8px;
-    box-sizing: border-box;
+       box-sizing: border-box;
   }
 
   .teams-table tr {
@@ -1024,7 +1032,22 @@ button.document-card:hover {
     text-align: right;
   }
 }
+@media (max-width: 768px) {
+  .teams-table-wrapper {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    box-sizing: border-box;
+  }
 
+  .teams-table-wrapper .teams-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0;
+  }
+}
 /* Tablet / mobile */
 
 @media (max-width: 900px) {
