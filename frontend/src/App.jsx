@@ -521,11 +521,23 @@ if (!auth.authenticated) {
       Subscription Collection
     </div>
 
-  <div className="overview-kpi-detail">
-  {collectionSummary
-    ? `${collectionSummary.successfulCollections} of ${collectionSummary.totalCollections} collections successful`
-    : "Current financial year"}
+<div className="overview-kpi-detail">
+  {collectionSummary ? (
+    <>
+      <div>
+        {collectionSummary.successfulCollections} of{" "}
+        {collectionSummary.totalCollections} collections successful
+      </div>
+
+      <div>
+        £{collectionSummary.totalOverdue.toFixed(2)} overdue
+      </div>
+    </>
+  ) : (
+    "Current financial year"
+  )}
 </div>
+
   </button>
 
 
