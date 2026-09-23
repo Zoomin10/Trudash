@@ -1073,3 +1073,109 @@ button.document-card:hover {
     font-size: 0.78rem;
   }
 }
+/* =====================================================
+   CLUB WELFARE
+===================================================== */
+
+.content-section {
+  width: 100%;
+}
+
+.content-section .section-header {
+  margin-bottom: 24px;
+}
+
+.content-section .section-header h1 {
+  margin: 0 0 6px;
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.content-section .section-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 15px;
+}
+
+/* Welfare summary KPI */
+
+.overview-summary-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 22px 24px;
+  margin-bottom: 24px;
+  max-width: 260px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.overview-summary-value {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.overview-summary-label {
+  font-size: 14px;
+  color: #64748b;
+}
+
+/* Complaints table card */
+
+.table-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.table-card-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.table-card-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-wrapper th,
+.table-wrapper td {
+  padding: 14px 24px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.table-wrapper th {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  background: #f8fafc;
+}
+
+.table-wrapper td {
+  font-size: 14px;
+}
+
+.table-wrapper tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.empty-state {
+  padding: 24px;
+  margin: 0;
+  color: #64748b;
+}
