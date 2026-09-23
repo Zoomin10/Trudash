@@ -620,31 +620,36 @@ if (!auth.authenticated) {
     </div>
   </button>
 
-
-  {/* CLUB WELFARE */}
-  <button
-    className="overview-kpi-card"
-    onClick={() => {
-      setCurrentSection("safeguarding");
-      setCurrentTab("overview");
-    }}
-  >
+{/* CLUB WELFARE */}
+<button
+  className="overview-kpi-card"
+  onClick={() => {
+    setCurrentSection("safeguarding");
+    setCurrentTab("overview");
+  }}
+>
   <div className="overview-kpi-icon">
-  <ShieldCheck size={30} strokeWidth={2} />
-</div>
+    <ShieldCheck size={30} strokeWidth={2} />
+  </div>
 
-    <div className="overview-kpi-value">
-      —
-    </div>
+  <div className="overview-kpi-value">
+    {complaintsSummary
+      ? complaintsSummary.openComplaints
+      : "—"}
+  </div>
 
-    <div className="overview-kpi-title">
-      Club Welfare
-    </div>
+  <div className="overview-kpi-title">
+    Club Welfare
+  </div>
 
-    <div className="overview-kpi-detail">
-      Safeguarding & complaints
-    </div>
-  </button>
+  <div className="overview-kpi-detail">
+    {complaintsSummary
+      ? complaintsSummary.openComplaints === 1
+        ? "Open complaint"
+        : "Open complaints"
+      : "Safeguarding & complaints"}
+  </div>
+</button>
 
 </section>
 
