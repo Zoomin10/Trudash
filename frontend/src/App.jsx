@@ -951,8 +951,10 @@ if (!auth.authenticated) {
 {collectionSummary && (
   <section className="module-grid">
 
+
+    {/* Collection Success */}  
  <div className="module-card">
-      <div className="stat-value">
+      <div className="module-value">
         {collectionSummary.collectionRate}%
       </div>
       <div className="module-title">
@@ -963,8 +965,9 @@ if (!auth.authenticated) {
       </div>
     </div>
 
+    {/* Successful Collections */}
    <div className="module-card">
-      <div className="stat-value">
+      <div className="module-value">
         {collectionSummary.successfulCollections}
       </div>
     <div className="module-title">
@@ -975,6 +978,7 @@ if (!auth.authenticated) {
       </div>
     </div>
 
+   {/* Club Overdue */} 
  <div className="module-card">
   <div className="module-value">
         £{collectionSummary.totalOverdue.toFixed(2)}
@@ -987,10 +991,9 @@ if (!auth.authenticated) {
       </div>
     </div>
 
-</section>
-)}
-    <section className="module-grid">
 
+
+    {/* Club Received */}
       <div className="module-card">
         <div className="module-title">
           Club Received
@@ -1013,7 +1016,7 @@ if (!auth.authenticated) {
         </div>
       </div>
 
-
+  {/* Paid by Members */}
       <div className="module-card">
         <div className="module-title">
           Paid by Members
@@ -1036,26 +1039,7 @@ if (!auth.authenticated) {
         </div>
       </div>
 
-
-    
-
-
-      <div className="module-card">
-        <div className="module-title">
-          Future Collections (this FY)
-        </div>
-
-        <div className="module-value">
-          {membersSummary?.payments?.collectionsPending ?? "—"}
-        </div>
-
-        <div className="module-description">
-          Scheduled / pending collections
-        </div>
-      </div>
-
-
-
+    {/* Discounted Memberships */}
       <div className="module-card">
         <div className="module-title">
           Discounted Memberships
@@ -1070,7 +1054,9 @@ if (!auth.authenticated) {
         </div>
       </div>
 
-    </section>
+   
+  </section>
+)}
 
 {collectionSummary?.months?.length > 0 && (
   <section className="panel">
