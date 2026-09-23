@@ -335,7 +335,6 @@ body {
 
 .main-area {
   flex: 1;
-  margin-left: 240px;
   min-width: 0;
 }
 
