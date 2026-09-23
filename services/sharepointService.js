@@ -672,11 +672,11 @@ const payments = {
   };
 }
 async function getComplaintsSummary() {
- const folderPath = "../Safeguarding & Complaints";
+const folderPath = "Safeguarding & Complaints";
 
 const documents =
   await getDocumentsFromRootFolder(folderPath);
-  
+
   const complaintsRegister = documents.find((document) =>
     document.name.includes("WWFC_Complaints_Register")
   );
