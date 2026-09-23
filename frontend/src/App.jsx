@@ -909,8 +909,8 @@ if (!auth.authenticated) {
       </p>
     </div>
 
-    <div className="policy-table-wrapper">
-      <table className="policy-table teams-table">
+<div className="policy-table-wrapper teams-table-wrapper">
+  <table className="policy-table teams-table">
         <thead>
           <tr>
             <th>Team</th>
