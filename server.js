@@ -10,6 +10,7 @@ const {
   getTeamFeePayReports,
   getTeamFeePaySeasonSummary,
   getTeamFeePayAgreementSummary,
+  getTeamFeePayCollectionSummary,
   inspectTeamFeePayAgreementReport,
 } = require("./services/sharepointService");
 const app = express();
@@ -301,6 +302,28 @@ app.get(
 
       res.status(500).json({
         error: "Unable to load TeamFeePay agreement summary",
+      });
+    }
+  }
+);
+app.get(
+  "/api/members/collections",
+  requireAuth,
+  async (req, res) => {
+    try {
+      const summary =
+        await getTeamFeePayCollectionSummary();
+
+      res.json(summary);
+    } catch (error) {
+      console.error(
+        "Unable to retrieve TeamFeePay collection summary:",
+        error
+      );
+
+      res.status(500).json({
+        error:
+          "Unable to retrieve TeamFeePay collection summary",
       });
     }
   }

@@ -56,11 +56,34 @@ const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 const [documentationSummary, setDocumentationSummary] = useState(null);
 const [membersSummary, setMembersSummary] = useState(null);
 const [agreementsSummary, setAgreementsSummary] = useState(null);
+const [collectionSummary, setCollectionSummary] = useState(null);
 const [auth, setAuth] = useState({
   loading: true,
   authenticated: false,
   user: null,
 });
+
+useEffect(() => {
+  if (!auth.authenticated) return;
+
+  fetch("/api/members/collections")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to load collection summary");
+      }
+
+      return response.json();
+    })
+    .then((data) => {
+      setCollectionSummary(data);
+    })
+    .catch((error) => {
+      console.error(
+        "Failed to load collection summary:",
+        error
+      );
+    });
+}, [auth.authenticated]);
 
 useEffect(() => {
 if (!auth.authenticated || currentSection !== "documentation") {
@@ -488,17 +511,33 @@ if (!auth.authenticated) {
       £
     </div>
 
-    <div className="overview-kpi-value">
-      —
-    </div>
+   <div className="overview-kpi-value">
+  {collectionSummary
+    ? `${collectionSummary.collectionRate}%`
+    : "—"}
+</div>
 
     <div className="overview-kpi-title">
       Subscription Collection
     </div>
 
-    <div className="overview-kpi-detail">
-      Current financial year
-    </div>
+<div className="overview-kpi-detail">
+  {collectionSummary ? (
+    <>
+      <div>
+        {collectionSummary.successfulCollections} of{" "}
+        {collectionSummary.totalCollections} collections successful
+      </div>
+
+      <div>
+        £{collectionSummary.totalOverdue.toFixed(2)} overdue
+      </div>
+    </>
+  ) : (
+    "Current financial year"
+  )}
+</div>
+
   </button>
 
 
