@@ -36,9 +36,11 @@ body {
 /* Main content */
 
 .dashboard-content {
+  width: 100%;
   max-width: 1400px;
   margin: 0 auto;
   padding: 22px 40px 32px;
+  box-sizing: border-box;
 }
 
 .section-heading {
@@ -341,9 +343,15 @@ body {
   height: 88px;
   background: white;
   border-bottom: 1px solid #e5e7eb;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .topbar-identity {
