@@ -1069,7 +1069,7 @@ if (!auth.authenticated) {
     </div>
 
     <div className="policy-table-wrapper">
-      <table className="policy-table">
+      <table className="policy-table collection-history-table">
         <thead>
           <tr>
             <th>Month</th>

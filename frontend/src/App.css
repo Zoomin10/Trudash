@@ -937,3 +937,12 @@ margin: 24px auto 0;
     font-size: 0.78rem;
   }
 }
+.collection-history-table th,
+.collection-history-table td {
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+.collection-history-table th {
+  white-space: nowrap;
+}
