@@ -307,7 +307,7 @@ if (!auth.authenticated) {
 />
 
         <div>
-          <div className="brand-name">TRUDASH</div>
+          <div className="brand-name">TruDash</div>
           <div className="brand-subtitle">WWFC Governance</div>
         </div>
       </div>
