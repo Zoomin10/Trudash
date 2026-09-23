@@ -934,6 +934,47 @@ if (!auth.authenticated) {
 {/* Payments */}
 {currentTab === "payments" && (
   <>
+    {collectionSummary && (
+  <div className="members-stats-grid">
+
+    <div className="stat-card">
+      <div className="stat-value">
+        {collectionSummary.collectionRate}%
+      </div>
+      <div className="stat-label">
+        Collection Success
+      </div>
+      <div className="stat-detail">
+        Financial year to date
+      </div>
+    </div>
+
+    <div className="stat-card">
+      <div className="stat-value">
+        {collectionSummary.successfulCollections}
+      </div>
+      <div className="stat-label">
+        Successful Collections
+      </div>
+      <div className="stat-detail">
+        of {collectionSummary.totalCollections} due
+      </div>
+    </div>
+
+    <div className="stat-card">
+      <div className="stat-value">
+        £{collectionSummary.totalOverdue.toFixed(2)}
+      </div>
+      <div className="stat-label">
+        Club Overdue
+      </div>
+      <div className="stat-detail">
+        Current FY position
+      </div>
+    </div>
+
+  </div>
+)}
     <section className="module-grid">
 
       <div className="module-card">
