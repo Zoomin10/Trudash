@@ -373,18 +373,7 @@ if (!auth.authenticated) {
           Members
         </button>
 
-        <button
-          className={`nav-item ${
-            currentSection === "finance" ? "active" : ""
-          }`}
-          onClick={() => {
-            setCurrentSection("finance");
-            setCurrentTab("overview");
-            setMobileMenuOpen(false);
-          }}
-        >
-          Finance
-        </button>
+        
 
         <button
           className={`nav-item ${
@@ -396,20 +385,22 @@ if (!auth.authenticated) {
             setMobileMenuOpen(false);
           }}
         >
-          Safeguarding
+          Club Welfare
         </button>
 
-        <button
+       
+
+<button
           className={`nav-item ${
-            currentSection === "complaints" ? "active" : ""
+            currentSection === "finance" ? "active" : ""
           }`}
           onClick={() => {
-            setCurrentSection("complaints");
+            setCurrentSection("finance");
             setCurrentTab("overview");
             setMobileMenuOpen(false);
           }}
         >
-          Complaints
+          Finance
         </button>
 
         <button
