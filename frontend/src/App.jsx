@@ -62,6 +62,7 @@ const [documentationSummary, setDocumentationSummary] = useState(null);
 const [membersSummary, setMembersSummary] = useState(null);
 const [agreementsSummary, setAgreementsSummary] = useState(null);
 const [collectionSummary, setCollectionSummary] = useState(null);
+const [complaintsSummary, setComplaintsSummary] = useState(null);
 const [auth, setAuth] = useState({
   loading: true,
   authenticated: false,
@@ -88,6 +89,26 @@ useEffect(() => {
         error
       );
     });
+}, [auth.authenticated]);
+
+useEffect(() => {
+  if (!auth.authenticated) return;
+
+  fetch("/api/welfare/complaints")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to load complaints summary");
+      }
+
+      return response.json();
+    })
+    .then((data) => setComplaintsSummary(data))
+    .catch((error) =>
+      console.error(
+        "Failed to load complaints summary:",
+        error
+      )
+    );
 }, [auth.authenticated]);
 
 useEffect(() => {
