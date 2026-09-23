@@ -674,6 +674,10 @@ async function getTeamFeePayCollectionSummary() {
       defval: null,
       blankrows: false,
     });
+    console.log(
+  `TeamFeePay Summary - ${report.name}`,
+  JSON.stringify(rows.slice(0, 20))
+);
 
     /*
       TeamFeePay Summary sheet:
