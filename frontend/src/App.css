@@ -940,7 +940,57 @@ button.document-card:hover {
   padding: 14px 10px;
   white-space: nowrap;
 }
+/* Compact team membership view on mobile */
 
+@media (max-width: 768px) {
+  .teams-table thead {
+    display: none;
+  }
+
+  .teams-table,
+  .teams-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .teams-table tbody {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .teams-table tr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #ffffff;
+
+    padding: 12px 14px;
+  }
+
+  .teams-table td {
+    display: block;
+    width: auto !important;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  .teams-table td:first-child {
+    font-weight: 600;
+    text-align: left;
+  }
+
+  .teams-table td:last-child {
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-align: right;
+    margin-left: 10px;
+  }
+}
 
 /* Tablet / mobile */
 
