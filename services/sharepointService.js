@@ -409,14 +409,21 @@ async function getTeamFeePayWorkbook(fileId) {
 async function getTeamFeePaySeasonSummary() {
   const reports = await getTeamFeePayReports();
 
-  const seasonReport = reports.find((report) =>
+const seasonReports = reports
+  .filter((report) =>
     report.name.includes("Season_Report")
+  )
+  .sort(
+    (a, b) =>
+      new Date(b.lastModifiedDateTime) -
+      new Date(a.lastModifiedDateTime)
   );
 
-  if (!seasonReport) {
-    throw new Error("TeamFeePay Season Report not found.");
-  }
+const seasonReport = seasonReports[0];
 
+if (!seasonReport) {
+  throw new Error("TeamFeePay Season Report not found.");
+}
   const workbook = await getTeamFeePayWorkbook(
     seasonReport.id
   );
@@ -713,7 +720,7 @@ const dueToClub =
 
 const overdue =
   findValue("Total Overdue for Club");
-  
+
     totalCollections += collections;
     successfulCollections += successful;
     failedCollections += failed;
