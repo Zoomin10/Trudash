@@ -265,7 +265,7 @@ if (!auth.authenticated) {
           className="auth-logo"
         />
 
-        <h1>Trudash</h1>
+        <h1>TruDash</h1>
         <p>WWFC Trustee Dashboard</p>
 
         <a
