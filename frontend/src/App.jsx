@@ -373,18 +373,7 @@ if (!auth.authenticated) {
           Members
         </button>
 
-        <button
-          className={`nav-item ${
-            currentSection === "finance" ? "active" : ""
-          }`}
-          onClick={() => {
-            setCurrentSection("finance");
-            setCurrentTab("overview");
-            setMobileMenuOpen(false);
-          }}
-        >
-          Finance
-        </button>
+        
 
         <button
           className={`nav-item ${
@@ -396,20 +385,22 @@ if (!auth.authenticated) {
             setMobileMenuOpen(false);
           }}
         >
-          Safeguarding
+          Club Welfare
         </button>
 
-        <button
+       
+
+<button
           className={`nav-item ${
-            currentSection === "complaints" ? "active" : ""
+            currentSection === "finance" ? "active" : ""
           }`}
           onClick={() => {
-            setCurrentSection("complaints");
+            setCurrentSection("finance");
             setCurrentTab("overview");
             setMobileMenuOpen(false);
           }}
         >
-          Complaints
+          Finance
         </button>
 
         <button
@@ -596,29 +587,31 @@ if (!auth.authenticated) {
 
 
   {/* DOCUMENTATION */}
-  <button
-    className="overview-kpi-card"
-    onClick={() => {
-      setCurrentSection("documentation");
-      setCurrentTab("policies");
-    }}
-  >
-<div className="overview-kpi-icon">
-  <ClipboardCheck size={30} strokeWidth={2} />
-</div>
+ <button
+  className="overview-kpi-card"
+  onClick={() => {
+    setCurrentSection("documentation");
+    setCurrentTab("policies");
+  }}
+>
+  <div className="overview-kpi-icon">
+    <ClipboardCheck size={30} strokeWidth={2} />
+  </div>
 
-    <div className="overview-kpi-value">
-      {documentationSummary?.incomplete ?? "—"}
-    </div>
+  <div className="overview-kpi-value">
+    {documentationSummary?.total ?? "—"}
+  </div>
 
-    <div className="overview-kpi-title">
-      Document Control
-    </div>
+  <div className="overview-kpi-title">
+    Document Control
+  </div>
 
-    <div className="overview-kpi-detail">
-      Require attention
-    </div>
-  </button>
+  <div className="overview-kpi-detail">
+    {documentationSummary
+      ? `${documentationSummary.incomplete} require attention`
+      : "Controlled documents"}
+  </div>
+</button> 
 
 {/* CLUB WELFARE */}
 <button
