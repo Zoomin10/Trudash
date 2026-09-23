@@ -809,3 +809,26 @@ button.document-card:hover {
   font-size: 0.9rem;
   text-align: right;
 }
+
+/* Scrollable table wrapper */
+
+.policy-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 768px) {
+  .agreement-progress {
+    min-width: 100px;
+    gap: 6px;
+  }
+
+  .agreement-progress-bar {
+    width: 60px;
+  }
+
+  .agreement-progress-value {
+    min-width: 32px;
+    font-size: 0.8rem;
+  }
+}
