@@ -62,6 +62,7 @@ const [documentationSummary, setDocumentationSummary] = useState(null);
 const [membersSummary, setMembersSummary] = useState(null);
 const [agreementsSummary, setAgreementsSummary] = useState(null);
 const [collectionSummary, setCollectionSummary] = useState(null);
+const [complaintsSummary, setComplaintsSummary] = useState(null);
 const [auth, setAuth] = useState({
   loading: true,
   authenticated: false,
@@ -88,6 +89,26 @@ useEffect(() => {
         error
       );
     });
+}, [auth.authenticated]);
+
+useEffect(() => {
+  if (!auth.authenticated) return;
+
+  fetch("/api/welfare/complaints")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to load complaints summary");
+      }
+
+      return response.json();
+    })
+    .then((data) => setComplaintsSummary(data))
+    .catch((error) =>
+      console.error(
+        "Failed to load complaints summary:",
+        error
+      )
+    );
 }, [auth.authenticated]);
 
 useEffect(() => {
@@ -599,31 +620,36 @@ if (!auth.authenticated) {
     </div>
   </button>
 
-
-  {/* CLUB WELFARE */}
-  <button
-    className="overview-kpi-card"
-    onClick={() => {
-      setCurrentSection("safeguarding");
-      setCurrentTab("overview");
-    }}
-  >
+{/* CLUB WELFARE */}
+<button
+  className="overview-kpi-card"
+  onClick={() => {
+    setCurrentSection("safeguarding");
+    setCurrentTab("overview");
+  }}
+>
   <div className="overview-kpi-icon">
-  <ShieldCheck size={30} strokeWidth={2} />
-</div>
+    <ShieldCheck size={30} strokeWidth={2} />
+  </div>
 
-    <div className="overview-kpi-value">
-      —
-    </div>
+  <div className="overview-kpi-value">
+    {complaintsSummary
+      ? complaintsSummary.openComplaints
+      : "—"}
+  </div>
 
-    <div className="overview-kpi-title">
-      Club Welfare
-    </div>
+  <div className="overview-kpi-title">
+    Club Welfare
+  </div>
 
-    <div className="overview-kpi-detail">
-      Safeguarding & complaints
-    </div>
-  </button>
+  <div className="overview-kpi-detail">
+    {complaintsSummary
+      ? complaintsSummary.openComplaints === 1
+        ? "Open complaint"
+        : "Open complaints"
+      : "Safeguarding & complaints"}
+  </div>
+</button>
 
 </section>
 
@@ -1258,12 +1284,87 @@ if (!auth.authenticated) {
 )}
 
         {/* =====================================================
+            welfare SECTIONS
+        ====================================================== */}
+{currentSection === "safeguarding" && currentTab === "overview" && (
+  <section className="content-section">
+    <div className="section-header">
+      <div>
+        <h1>Club Welfare</h1>
+        <p>
+          Trustee-level oversight of safeguarding and complaints.
+        </p>
+      </div>
+    </div>
+
+    <div className="overview-summary-card">
+      <div className="overview-summary-value">
+        {complaintsSummary
+          ? complaintsSummary.openComplaints
+          : "—"}
+      </div>
+
+      <div className="overview-summary-label">
+        {complaintsSummary?.openComplaints === 1
+          ? "Open Complaint"
+          : "Open Complaints"}
+      </div>
+    </div>
+
+    <div className="table-card">
+      <div className="table-card-header">
+        <h2>Open Complaints</h2>
+      </div>
+
+      {complaintsSummary?.cases?.length > 0 ? (
+        <div className="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Case Ref</th>
+                <th>Case Owner</th>
+                <th>Last Review</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {complaintsSummary.cases.map((complaint) => (
+                <tr key={complaint.caseRef}>
+                  <td>{complaint.caseRef}</td>
+                  <td>{complaint.caseOwner || "—"}</td>
+                  <td>
+                    {complaint.lastReview
+                      ? new Date(
+                          complaint.lastReview
+                        ).toLocaleDateString("en-GB")
+                      : "—"}
+                  </td>
+                  <td>{complaint.status || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="empty-state">
+          No open complaints.
+        </p>
+      )}
+    </div>
+  </section>
+)}
+
+
+
+        {/* =====================================================
             PLACEHOLDER SECTIONS
         ====================================================== */}
 
        {currentSection !== "overview" &&
   currentSection !== "documentation" &&
-  currentSection !== "members" && (
+  currentSection !== "members" &&
+    currentSection !== "safeguarding" &&  (
             <>
 
               <div className="section-heading">

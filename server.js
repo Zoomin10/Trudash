@@ -11,6 +11,7 @@ const {
   getTeamFeePaySeasonSummary,
   getTeamFeePayAgreementSummary,
   getTeamFeePayCollectionSummary,
+  getComplaintsSummary,
   inspectTeamFeePayAgreementReport,
 } = require("./services/sharepointService");
 const app = express();
@@ -363,6 +364,25 @@ app.get("/api/members/summary", requireAuth, async (req, res) => {
   }
 });
 
+app.get(
+  "/api/welfare/complaints",
+  requireAuth,
+  async (req, res) => {
+    try {
+      const summary = await getComplaintsSummary();
+      res.json(summary);
+    } catch (error) {
+      console.error(
+        "Failed to load complaints summary:",
+        error
+      );
+
+      res.status(500).json({
+        error: "Failed to load complaints summary",
+      });
+    }
+  }
+);
 // Serve the React production build
 const frontendPath = path.join(__dirname, "frontend", "dist");
 

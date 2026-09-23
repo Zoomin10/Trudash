@@ -155,6 +155,33 @@ async function getDocumentsFromGovernanceFolder(folderPath) {
   return data.value;
 }
 
+async function getDocumentsFromRootFolder(folderPath) {
+  const accessToken = await getAccessToken();
+  const documentsLibrary = await getDocumentsLibrary();
+
+  const response = await fetch(
+    `https://graph.microsoft.com/v1.0/drives/${documentsLibrary.id}/root:/${folderPath}:/children`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+
+    throw new Error(
+      `Unable to retrieve documents from ${folderPath}: ` +
+      `${response.status} ${errorText}`
+    );
+  }
+
+  const data = await response.json();
+
+  return data.value;
+}
+
 async function getPolicyDocuments() {
   const accessToken = await getAccessToken();
   const documentsLibrary = await getDocumentsLibrary();
@@ -644,7 +671,57 @@ const payments = {
   teams: teamCounts,
   };
 }
+async function getComplaintsSummary() {
+const folderPath = "Safeguarding & Complaints";
 
+const documents =
+  await getDocumentsFromRootFolder(folderPath);
+
+  const complaintsRegister = documents.find((document) =>
+    document.name.includes("WWFC_Complaints_Register")
+  );
+
+  if (!complaintsRegister) {
+    throw new Error("WWFC Complaints Register not found.");
+  }
+
+  const workbook = await getTeamFeePayWorkbook(
+    complaintsRegister.id
+  );
+
+  const sheetName = "Complaints Register";
+  const worksheet = workbook.Sheets[sheetName];
+
+  if (!worksheet) {
+    throw new Error(
+      `Worksheet "${sheetName}" not found in Complaints Register.`
+    );
+  }
+
+  const rows = XLSX.utils.sheet_to_json(worksheet, {
+    defval: "",
+  });
+
+  const cases = rows
+    .filter((row) => row["Case Ref"])
+    .map((row) => ({
+      caseRef: row["Case Ref"],
+      caseOwner: row["Case Owner"] || null,
+      lastReview: row["Committee Review Date"] || null,
+      status: row["Status"] || null,
+    }));
+
+  const openCases = cases.filter(
+    (complaint) =>
+      complaint.status &&
+      complaint.status.trim() !== "Closed"
+  );
+
+  return {
+    openComplaints: openCases.length,
+    cases: openCases,
+  };
+}
 async function getTeamFeePayCollectionSummary() {
   const reports = await getTeamFeePayReports();
 
@@ -923,5 +1000,6 @@ module.exports = {
   getTeamFeePaySeasonSummary,
 getTeamFeePayAgreementSummary, 
 getTeamFeePayCollectionSummary,
+getComplaintsSummary,
   
 };
