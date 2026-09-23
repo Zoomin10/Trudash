@@ -1107,6 +1107,54 @@ if (!auth.authenticated) {
 
     </section>
 
+{collectionSummary?.months?.length > 0 && (
+  <section className="panel">
+    <div className="panel-header">
+      <h2>Monthly Collection History</h2>
+      <p>
+        Subscription collection performance for each TeamFeePay
+        collection cycle.
+      </p>
+    </div>
+
+    <div className="policy-table-wrapper">
+      <table className="policy-table">
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th>Collections</th>
+            <th>Successful</th>
+            <th>Failed</th>
+            <th>Success Rate</th>
+            <th>Club Overdue</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {collectionSummary.months.map((month) => (
+            <tr key={month.month}>
+              <td>
+                {new Date(`${month.month}-01`).toLocaleDateString(
+                  "en-GB",
+                  {
+                    month: "long",
+                    year: "numeric",
+                  }
+                )}
+              </td>
+
+              <td>{month.collections}</td>
+              <td>{month.successful}</td>
+              <td>{month.failed}</td>
+              <td>{month.collectionRate}%</td>
+              <td>£{month.overdue.toFixed(2)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+)}
 
     <section className="panel">
       <div className="panel-header">
