@@ -637,6 +637,128 @@ const payments = {
   teams: teamCounts,
   };
 }
+
+async function getTeamFeePayCollectionSummary() {
+  const reports = await getTeamFeePayReports();
+
+  const monthlyReports = reports
+    .filter((report) =>
+      report.name.includes("Monthly_By_Team_Report")
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.lastModifiedDateTime) -
+        new Date(b.lastModifiedDateTime)
+    );
+
+  let totalCollections = 0;
+  let successfulCollections = 0;
+  let failedCollections = 0;
+  let totalPaidByUsers = 0;
+  let totalDueToClub = 0;
+  let totalOverdue = 0;
+
+  const months = [];
+
+  for (const report of monthlyReports) {
+    const workbook = await getTeamFeePayWorkbook(report.id);
+
+    const summarySheet = workbook.Sheets["Summary"];
+
+    if (!summarySheet) {
+      continue;
+    }
+
+    const rows = XLSX.utils.sheet_to_json(summarySheet, {
+      header: 1,
+      defval: null,
+      blankrows: false,
+    });
+
+    /*
+      TeamFeePay Summary sheet:
+      Find values by their labels rather than relying
+      on fixed row numbers.
+    */
+
+    const findValue = (label) => {
+      for (const row of rows) {
+        if (
+          String(row[0] || "")
+            .trim()
+            .toLowerCase() === label.toLowerCase()
+        ) {
+          return Number(row[1]) || 0;
+        }
+      }
+
+      return 0;
+    };
+
+    const collections = findValue("Collections");
+    const successful = findValue("Successful");
+    const failed = findValue("Failed");
+    const paidByUsers = findValue("Amount Paid By Users");
+    const dueToClub = findValue("Amount Due To Club");
+    const overdue = findValue("Club Overdue");
+
+    totalCollections += collections;
+    successfulCollections += successful;
+    failedCollections += failed;
+    totalPaidByUsers += paidByUsers;
+    totalDueToClub += dueToClub;
+    totalOverdue += overdue;
+
+    const monthMatch = report.name.match(
+      /Monthly_By_Team_Report_for_(\d{4})-(\d{2})/
+    );
+
+    const month =
+      monthMatch
+        ? `${monthMatch[1]}-${monthMatch[2]}`
+        : report.name;
+
+    months.push({
+      month,
+      collections,
+      successful,
+      failed,
+      collectionRate:
+        collections > 0
+          ? Math.round((successful / collections) * 1000) / 10
+          : 0,
+      paidByUsers,
+      dueToClub,
+      overdue,
+    });
+  }
+
+  const collectionRate =
+    totalCollections > 0
+      ? Math.round(
+          (successfulCollections / totalCollections) * 1000
+        ) / 10
+      : 0;
+
+  return {
+    collectionRate,
+    totalCollections,
+    successfulCollections,
+    failedCollections,
+
+    totalPaidByUsers:
+      Math.round(totalPaidByUsers * 100) / 100,
+
+    totalDueToClub:
+      Math.round(totalDueToClub * 100) / 100,
+
+    totalOverdue:
+      Math.round(totalOverdue * 100) / 100,
+
+    months,
+  };
+}
+
 async function getTeamFeePayAgreementSummary() {
   const reports = await getTeamFeePayReports();
 
@@ -781,5 +903,6 @@ module.exports = {
   getTeamFeePayWorkbook,
   getTeamFeePaySeasonSummary,
 getTeamFeePayAgreementSummary, 
+getTeamFeePayCollectionSummary,
   
 };
