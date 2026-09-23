@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import DocumentRegister from "./components/DocumentRegister";
-
+import {
+  Scale,
+  Users,
+  ClipboardCheck,
+  ShieldCheck,
+} from "lucide-react";
 
 const documentationCategories = {
   policies: {
@@ -507,9 +512,9 @@ if (!auth.authenticated) {
       setCurrentTab("payments");
     }}
   >
-    <div className="overview-kpi-icon">
-      £
-    </div>
+   <div className="overview-kpi-icon">
+  <Scale size={24} strokeWidth={2} />
+</div>
 
    <div className="overview-kpi-value">
   {collectionSummary
@@ -549,9 +554,9 @@ if (!auth.authenticated) {
       setCurrentTab("overview");
     }}
   >
-    <div className="overview-kpi-icon">
-      ♟
-    </div>
+   <div className="overview-kpi-icon">
+  <Users size={24} strokeWidth={2} />
+</div>
 
     <div className="overview-kpi-value">
       {membersSummary?.totalMembers ?? "—"}
@@ -577,9 +582,9 @@ if (!auth.authenticated) {
       setCurrentTab("policies");
     }}
   >
-    <div className="overview-kpi-icon">
-      ▤
-    </div>
+<div className="overview-kpi-icon">
+  <ClipboardCheck size={24} strokeWidth={2} />
+</div>
 
     <div className="overview-kpi-value">
       {documentationSummary?.incomplete ?? "—"}
@@ -603,9 +608,9 @@ if (!auth.authenticated) {
       setCurrentTab("overview");
     }}
   >
-    <div className="overview-kpi-icon">
-      ◇
-    </div>
+  <div className="overview-kpi-icon">
+  <ShieldCheck size={24} strokeWidth={2} />
+</div>
 
     <div className="overview-kpi-value">
       —
