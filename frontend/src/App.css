@@ -949,61 +949,79 @@ button.document-card:hover {
   padding: 14px 10px;
   white-space: nowrap;
 }
-/* Compact team membership view on mobile */
+/* Team membership table */
+
+.teams-table th:first-child,
+.teams-table td:first-child {
+  width: 85%;
+  text-align: left;
+}
+
+.teams-table th:nth-child(2),
+.teams-table td:nth-child(2) {
+  width: 15%;
+  text-align: center;
+}
+
+
+  /* Compact team membership view on mobile */
 
 @media (max-width: 768px) {
+
+  .teams-table {
+    width: 100%;
+    table-layout: fixed;
+  }
+
   .teams-table thead {
     display: none;
   }
 
-  .teams-table,
   .teams-table tbody {
     display: block;
     width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
   }
-
-  .teams-table tbody {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-  padding: 10px;
-  width: 100%;
-  box-sizing: border-box;
-}
 
   .teams-table tr {
     display: flex;
     align-items: center;
     justify-content: space-between;
 
-      width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
+    width: 100%;
+    box-sizing: border-box;
+
+    margin-bottom: 8px;
+    padding: 10px 12px;
 
     border: 1px solid #e5e7eb;
     border-radius: 10px;
     background: #ffffff;
-
-    padding: 10px 12px;
-  }
-
-  .teams-table td {
-    display: block;
-    width: auto !important;
-    padding: 0 !important;
-    border: 0 !important;
   }
 
   .teams-table td:first-child {
+    flex: 1;
+    width: auto !important;
+    min-width: 0;
+
+    padding: 0 !important;
+    border: 0 !important;
+
     font-weight: 600;
     text-align: left;
   }
 
-  .teams-table td:last-child {
+  .teams-table td:nth-child(2) {
+    flex: 0 0 40px;
+    width: 40px !important;
+
+    padding: 0 !important;
+    border: 0 !important;
+
     font-size: 1.1rem;
     font-weight: 700;
     text-align: right;
-    margin-left: 10px;
   }
 }
 
