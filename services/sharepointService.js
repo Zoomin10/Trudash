@@ -155,6 +155,33 @@ async function getDocumentsFromGovernanceFolder(folderPath) {
   return data.value;
 }
 
+async function getDocumentsFromRootFolder(folderPath) {
+  const accessToken = await getAccessToken();
+  const documentsLibrary = await getDocumentsLibrary();
+
+  const response = await fetch(
+    `https://graph.microsoft.com/v1.0/drives/${documentsLibrary.id}/root:/${folderPath}:/children`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+
+    throw new Error(
+      `Unable to retrieve documents from ${folderPath}: ` +
+      `${response.status} ${errorText}`
+    );
+  }
+
+  const data = await response.json();
+
+  return data.value;
+}
+
 async function getPolicyDocuments() {
   const accessToken = await getAccessToken();
   const documentsLibrary = await getDocumentsLibrary();
@@ -645,10 +672,11 @@ const payments = {
   };
 }
 async function getComplaintsSummary() {
-  const folderPath = "Safeguarding & Complaints";
+ const folderPath = "../Safeguarding & Complaints";
 
-  const documents = await getDocumentsFromGovernanceFolder(folderPath);
-
+const documents =
+  await getDocumentsFromRootFolder(folderPath);
+  
   const complaintsRegister = documents.find((document) =>
     document.name.includes("WWFC_Complaints_Register")
   );
