@@ -1161,7 +1161,22 @@ if (!auth.authenticated) {
                   <td>{agreement.documentName}</td>
                   <td>{agreement.signed}</td>
                   <td>{agreement.pending}</td>
-                  <td>{agreement.completionPercentage}%</td>
+                <td>
+  <div className="agreement-progress">
+    <div className="agreement-progress-bar">
+      <div
+        className="agreement-progress-fill"
+        style={{
+          width: `${agreement.completionPercentage}%`,
+        }}
+      />
+    </div>
+
+    <span className="agreement-progress-value">
+      {agreement.completionPercentage}%
+    </span>
+  </div>
+</td>
                 </tr>
               ))}
             </tbody>
