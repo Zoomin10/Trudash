@@ -778,3 +778,57 @@ button.document-card:hover {
   color: #94a3b8;
   font-size: 11px;
 }
+/* Member agreement completion */
+
+.agreement-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 150px;
+}
+
+.agreement-progress-bar {
+  width: 100px;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.agreement-progress-fill {
+  height: 100%;
+  background: #2563eb;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.agreement-progress-value {
+  min-width: 36px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-align: right;
+}
+
+/* Scrollable table wrapper */
+
+.policy-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 768px) {
+  .agreement-progress {
+    min-width: 100px;
+    gap: 6px;
+  }
+
+  .agreement-progress-bar {
+    width: 60px;
+  }
+
+  .agreement-progress-value {
+    min-width: 32px;
+    font-size: 0.8rem;
+  }
+}
