@@ -1363,7 +1363,8 @@ if (!auth.authenticated) {
 
        {currentSection !== "overview" &&
   currentSection !== "documentation" &&
-  currentSection !== "members" && (
+  currentSection !== "members" &&
+    currentSection !== "safeguarding" &&  (
             <>
 
               <div className="section-heading">
