@@ -860,6 +860,20 @@ if (!auth.authenticated) {
         </div>
       </div>
 
+<div className="module-card">
+  <div className="module-title">
+    Paused Memberships
+  </div>
+
+  <div className="module-value">
+    {membersSummary?.membershipStatus?.Paused ?? 0}
+  </div>
+
+  <div className="module-detail">
+    Memberships currently paused
+  </div>
+</div>
+
     </section>
 
     <section className="panel">
@@ -1023,42 +1037,7 @@ if (!auth.authenticated) {
       </div>
 
 
-      <div className="module-card">
-        <div className="module-title">
-          Overdue
-        </div>
-
-        <div className="module-value">
-          {membersSummary?.payments
-            ? `£${membersSummary.payments.totalClubOverdue.toLocaleString(
-                "en-GB",
-                {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                }
-              )}`
-            : "—"}
-        </div>
-
-        <div className="module-description">
-          Currently overdue to the club
-        </div>
-      </div>
-
-
-      <div className="module-card">
-        <div className="module-title">
-          Collections Paid
-        </div>
-
-        <div className="module-value">
-          {membersSummary?.payments?.collectionsPaid ?? "—"}
-        </div>
-
-        <div className="module-description">
-          Completed collections
-        </div>
-      </div>
+    
 
 
       <div className="module-card">
@@ -1075,20 +1054,6 @@ if (!auth.authenticated) {
         </div>
       </div>
 
-
-      <div className="module-card">
-        <div className="module-title">
-          Paused Memberships
-        </div>
-
-        <div className="module-value">
-          {membersSummary?.membershipStatus?.Paused ?? 0}
-        </div>
-
-        <div className="module-description">
-          Memberships currently paused
-        </div>
-      </div>
 
 
       <div className="module-card">
