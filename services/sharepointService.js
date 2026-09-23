@@ -674,10 +674,7 @@ async function getTeamFeePayCollectionSummary() {
       defval: null,
       blankrows: false,
     });
-    console.log(
-  `TeamFeePay Summary - ${report.name}`,
-  JSON.stringify(rows.slice(0, 20))
-);
+ 
 
     /*
       TeamFeePay Summary sheet:
@@ -699,13 +696,24 @@ async function getTeamFeePayCollectionSummary() {
       return 0;
     };
 
-    const collections = findValue("Collections");
-    const successful = findValue("Successful");
-    const failed = findValue("Failed");
-    const paidByUsers = findValue("Amount Paid By Users");
-    const dueToClub = findValue("Amount Due To Club");
-    const overdue = findValue("Club Overdue");
+   const collections =
+  findValue("Total Number of Collections");
 
+const successful =
+  findValue("Total Number of Successful Collections");
+
+const failed =
+  findValue("Total Number of Failed Collections");
+
+const paidByUsers =
+  findValue("Total Amount Collected");
+
+const dueToClub =
+  findValue("Total Amount Due to Club");
+
+const overdue =
+  findValue("Total Overdue for Club");
+  
     totalCollections += collections;
     successfulCollections += successful;
     failedCollections += failed;
