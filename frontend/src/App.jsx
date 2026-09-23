@@ -513,7 +513,7 @@ if (!auth.authenticated) {
     }}
   >
    <div className="overview-kpi-icon">
-  <Scale size={24} strokeWidth={2} />
+  <Scale size={30} strokeWidth={2} />
 </div>
 
    <div className="overview-kpi-value">
@@ -555,7 +555,7 @@ if (!auth.authenticated) {
     }}
   >
    <div className="overview-kpi-icon">
-  <Users size={24} strokeWidth={2} />
+  <Users size={30} strokeWidth={2} />
 </div>
 
     <div className="overview-kpi-value">
@@ -583,7 +583,7 @@ if (!auth.authenticated) {
     }}
   >
 <div className="overview-kpi-icon">
-  <ClipboardCheck size={24} strokeWidth={2} />
+  <ClipboardCheck size={30} strokeWidth={2} />
 </div>
 
     <div className="overview-kpi-value">
@@ -609,7 +609,7 @@ if (!auth.authenticated) {
     }}
   >
   <div className="overview-kpi-icon">
-  <ShieldCheck size={24} strokeWidth={2} />
+  <ShieldCheck size={30} strokeWidth={2} />
 </div>
 
     <div className="overview-kpi-value">

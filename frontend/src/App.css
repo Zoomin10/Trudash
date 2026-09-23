@@ -854,14 +854,13 @@ button.document-card:hover {
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 16px;
- width: 100%;
-max-width: 900px;
-margin: 24px auto 0;
+  padding: 20px 18px 16px;
+  min-height: 205px;
 
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
 
   text-align: center;
   cursor: pointer;
@@ -878,9 +877,9 @@ margin: 24px auto 0;
 }
 
 .overview-kpi-icon {
-  width: 48px;
-  height: 48px;
-  margin-bottom: 14px;
+  width: 58px;
+  height: 58px;
+  margin-bottom: 16px;
 
   display: flex;
   align-items: center;
@@ -894,10 +893,16 @@ margin: 24px auto 0;
 }
 
 .overview-kpi-value {
+  min-height: 46px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   font-size: 2.4rem;
   line-height: 1;
   font-weight: 700;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .overview-kpi-title {
