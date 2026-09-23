@@ -1,212 +1,87 @@
-# Trudash
+# TruDash
 
-**Trudash** is the trustee governance dashboard for **Wroughton & Wichelstowe FC (WWFC)**.
+Trustee governance dashboard for **Wroughton & Wichelstowe FC (WWFC)**.
 
-It is designed as a governance cockpit for trustees rather than a general club-management platform. The application brings together controlled documentation and, over time, finance, safeguarding oversight, complaints, risk, compliance, governance actions and other trustee-level information.
+TruDash is a web-based governance cockpit for the club's trustees. It brings together controlled-document oversight, membership and subscription KPIs, and future governance modules while keeping SharePoint and TeamFeePay as authoritative source systems.
 
-## Current Status
+## Current status
 
-Trudash is deployed successfully to Railway.
+TruDash is deployed to Railway with separate Development and Production environments.
 
-The current production deployment includes:
+Working areas:
 
-- React/Vite frontend
-- Node.js/Express backend
-- Microsoft Entra application authentication for server-to-server access
-- Microsoft Graph integration
-- Read-only access to the WWFC Trustees SharePoint site
-- Six live Documentation registers
-- Automatic deployment from the GitHub `main` branch via Railway
+- Microsoft Entra ID trustee sign-in
+- Server-side authenticated sessions and protected API routes
+- Microsoft Graph / SharePoint integration
+- Document Control dashboard and metadata hygiene
+- Members Overview
+- Team Membership
+- Payments and FYTD subscription collection
+- Registration
+- Membership Agreements
+- Responsive desktop/mobile navigation and tables
+- Main trustee Overview dashboard
 
-The React frontend and Express API are served by the same Railway service.
+Planned areas include Club Welfare, Finance, Risk, Decisions, Compliance and Strategy.
 
-> **Important:** end-user authentication is not yet implemented. The next priority is to protect the dashboard and API with trustee sign-in before adding more sensitive governance data or exposing the custom domain.
+## Technology
 
-## Architecture
+**Frontend:** React, Vite, Lucide React, responsive CSS  
+**Backend:** Node.js, Express, express-session, @azure/msal-node, xlsx  
+**Services:** Microsoft Entra ID, Microsoft Graph, SharePoint, Railway, GitHub
 
-```text
-Trustee browser
-      |
-      v
-Railway / Express
-   |          |
-   |          +--> React production build
-   |
-   +--> /api/*
-          |
-          v
-     Microsoft Entra
-          |
-          v
-     Microsoft Graph
-          |
-          v
-WWFC Trustees SharePoint
-```
+PostgreSQL/Prisma is intended later for governance-native records such as risks, decisions, complaints, actions and finance data.
 
-SharePoint remains the authoritative repository for controlled documents. Trudash reads document metadata through Microsoft Graph rather than duplicating document binaries into its own database.
+## Repository and deployment
 
-A PostgreSQL database is planned later for governance-native data such as complaints, decisions, risks, finance, compliance and KPIs.
+Repository: `Zoomin10/Trudash`
 
-## Technology Stack
+Branches:
 
-### Frontend
-- React
-- Vite
-- JavaScript
-- Oxlint
+- `develop` — active development / Railway Development
+- `main` — stable / Railway Production
 
-### Backend
-- Node.js
-- Express 5
-- `@azure/msal-node`
-- Microsoft Graph
+Workflow:
 
-### Hosting and Source Control
-- Railway
-- GitHub private repository: `Zoomin10/Trudash`
-- Production branch: `main`
-- Development branch: `develop`
+`develop → Railway Development → test → PR/merge → main → Railway Production`
 
-## Repository Structure
+The project is tested through Railway environments rather than localhost.
 
-```text
-Trudash/
-├── frontend/
-│   ├── public/
-│   │   └── images/
-│   ├── src/
-│   │   └── components/
-│   │       └── DocumentRegister.jsx
-│   └── dist/                 # generated production build; gitignored
-├── services/
-│   └── sharepointService.js
-├── graph-test.js
-├── server.js
-├── package.json
-├── package-lock.json
-├── .env                      # local secrets; gitignored
-└── .gitignore
-```
+## Authentication
 
-## Local Development
+Flow:
 
-### Prerequisites
+`Trustee → Entra sign-in → Express session → protected TruDash API → app-only Microsoft Graph identity → SharePoint`
 
-- Node.js
-- npm
-- Access to the required WWFC Entra application credentials
+Entra authenticates the trustee. The backend's separate application identity accesses SharePoint.
 
-### Environment Variables
+Important environment variables:
 
-Create a root `.env` file containing:
+- `TENANT_ID`
+- `CLIENT_ID`
+- `CLIENT_SECRET`
+- `SESSION_SECRET`
+- `APP_BASE_URL`
+- `NODE_ENV`
 
-```env
-TENANT_ID=<tenant-id>
-CLIENT_ID=<client-id>
-CLIENT_SECRET=<client-secret>
-```
+Secrets must never be committed to Git.
 
-Never commit `.env` or any client secret to Git.
+## SharePoint document architecture
 
-### Backend
+SharePoint remains the authoritative repository for controlled governance documents. TruDash reads document metadata through Microsoft Graph rather than duplicating document binaries.
 
-From the repository root:
+Current areas include:
 
-```powershell
-npm install
-npm start
-```
+- Governance Documents
+- Policy Documents
+- Process Documents
+- Finance Dcouments
+- Statuatory Documents
+- Digital Governance
 
-The Express backend runs locally on:
+The misspelled Finance/Statuatory folder names above are retained in backend paths because they are the actual SharePoint folder names.
 
-```text
-http://localhost:3001
-```
-
-Health check:
-
-```text
-http://localhost:3001/api/health
-```
-
-Expected response:
-
-```json
-{"status":"ok","application":"Trudash"}
-```
-
-### Frontend Development
-
-Run the Vite frontend from the `frontend` directory using its normal npm development command. Vite proxies `/api` requests to the Express backend on port 3001.
-
-### Production Build Test
-
-From the repository root:
-
-```powershell
-npm run build
-npm start
-```
-
-Then open:
-
-```text
-http://localhost:3001
-```
-
-This tests the production architecture locally: Express serves both the compiled React application and the API.
-
-The root build script is:
-
-```json
-"build": "npm --prefix frontend install && npm --prefix frontend run build"
-```
-
-The generated `frontend/dist/` directory is intentionally gitignored.
-
-## API
-
-### Health
-
-```text
-GET /api/health
-```
-
-### Generic Documentation API
-
-```text
-GET /api/documentation/:category
-```
-
-Supported categories:
-
-| API category | SharePoint area |
-| --- | --- |
-| `policies` | Policy Documents |
-| `governance` | Governance Documents |
-| `process` | Process Documents |
-| `statutory` | Statutory Documents |
-| `finance` | Finance Documents |
-| `digital` | Digital Governance |
-
-Example:
-
-```text
-GET /api/documentation/policies
-```
-
-A category response contains the category name, total document count, metadata-complete count, incomplete count and document metadata.
-
-Legacy policy/governance-specific API routes currently remain in `server.js`; the generic Documentation API is the preferred architecture.
-
-## SharePoint Integration
-
-Trudash reads from the WWFC Trustees SharePoint site using Microsoft Graph.
-
-The Graph application uses **Sites.Selected** application permission and has read-only access to the Trustees site.
-
-Controlled-document metadata currently includes:
+### Controlled-document metadata
 
 - Governance Category
 - Document Owner
@@ -214,150 +89,131 @@ Controlled-document metadata currently includes:
 - Approved Date
 - Next Review Date
 - Document Status
+- Review Requirement
 
-Trudash also calculates whether metadata is complete and identifies missing governance fields.
+Every controlled document requires Governance Category, Document Owner, Controlled Version and Document Status.
 
-Missing metadata is intentionally surfaced as a governance-health issue rather than silently filled by the application.
+Approved, Superseded and Archived documents additionally require Approved Date. Next Review Date is required at those statuses unless Review Requirement is `Not Required`.
 
-## Documentation Module
+Draft and Under Review documents can legitimately omit approval/review dates.
 
-The live Documentation area contains six tabs:
+## TeamFeePay reporting
 
-- Policy Documents
-- Governance Documents
-- Process Documents
-- Statutory Documents
-- Finance Documents
-- Digital Governance
+TeamFeePay reports are held in SharePoint under `TeamFeePay Reports`. TruDash processes the workbooks server-side and exposes trustee-level aggregates rather than raw personal data.
 
-All six use the reusable `DocumentRegister` React component and the generic Documentation API.
+### Season Report
 
-The register displays:
+The Season Report provides the current snapshot used by Members Overview, Teams, Payments and Registration.
 
-- filename and SharePoint link
-- controlled version
-- document owner
-- document status
-- next review date
-- governance metadata health
+When multiple files matching `Season_Report` exist, TruDash sorts them by SharePoint `lastModifiedDateTime` and uses the most recently modified report. Old Season Reports can therefore remain in SharePoint as historical snapshots.
 
-## Git Workflow
+Current worksheet: `2026-2027 Season`
 
-Normal development workflow:
+### Monthly collection reports
 
-```text
-local development
-      |
-      v
-   develop
-      |
-      v
-GitHub Pull Request
-      |
-      v
-     main
-      |
-      v
-Railway automatic deployment
-```
+Files containing `Monthly_By_Team_Report` are retained and aggregated to produce FYTD subscription collection metrics:
 
-Do feature work on `develop`.
+- collections due
+- successful collections
+- failed collections
+- collection success rate
+- gross amount paid by members
+- amount due to WWFC
+- club overdue amount
+- monthly collection history
 
-Typical flow:
+Monthly reports should be retained because each month contributes to the FYTD result.
 
-```powershell
-git checkout develop
-git pull
-# make and test changes
-git add .
-git commit -m "Description of change"
-git push
-```
+Future scheduled collections are **not** treated as overdue debt.
 
-Create a pull request from `develop` to `main`. Merge only after the change has been tested.
+### Agreements
 
-Railway production deploys from `main`.
+The Agreements area reports aggregate signing/completion by controlled membership document. Its applicable population can differ from the Season Report population.
 
-## Railway
+## Main Overview
 
-Production requires these Railway environment variables:
+Current headline KPIs:
 
-```text
-TENANT_ID
-CLIENT_ID
-CLIENT_SECRET
-NODE_ENV=production
-```
+1. Subscription Collection
+2. Members
+3. Document Control
+4. Club Welfare
 
-The client secret must remain in Railway's environment configuration and must never be committed to Git or exposed to the browser.
+Subscription Collection uses monthly TeamFeePay collection reports. Members uses the latest Season Report. Document Control uses live SharePoint metadata. Club Welfare is not yet connected to a live data source.
 
-Railway successfully serves:
+## Members module
 
-- the React application at `/`
-- the Express API at `/api/*`
-- live SharePoint-backed Documentation data
-
-## Security
-
-Current security design:
-
-- SharePoint access is server-side only.
-- The Graph application has read-only access to the Trustees SharePoint site.
-- Secrets are stored in `.env` locally and Railway Variables in production.
-- `.env` is gitignored.
-- SharePoint document binaries are not duplicated into Trudash.
-
-### Next security milestone
-
-Add trustee user authentication through Microsoft Entra and protect both:
-
-- dashboard routes
-- API routes
-
-This is separate from the existing application authentication used by the backend to call Microsoft Graph.
-
-Future security work should also consider:
-
-- trustee role-based access control
-- MFA through Microsoft identity policies
-- audit logging
-- backup/recovery arrangements
-- replacing the client secret with a stronger production credential approach where practical
-
-## Planned Modules
-
-The sidebar currently provides the wider Trudash structure:
+Tabs:
 
 - Overview
-- Documentation
-- Finance
-- Safeguarding
-- Complaints
-- Risk & Compliance
-- Governance
-- Organisation
+- Teams
+- Payments
+- Registration
+- Agreements
 
-Documentation is the first live integrated module.
+Payments includes current payment metrics plus FYTD Monthly Collection History.
 
-The next planned sequence is:
+Teams uses the latest Season Report and a compact responsive mobile layout.
 
-1. Trustee authentication and API protection
-2. Custom domain: `governance.wwfc.org.uk`
-3. Finance module
-4. Further governance-native modules and PostgreSQL persistence
-5. Trustee Governance Pack generation
+## Backend responsibilities
 
-## Known Follow-up
+`services/sharepointService.js` handles:
 
-The Overview Documentation attention count currently reflects policy-document metadata rather than an aggregate of all six documentation categories.
+- Microsoft Graph access token acquisition
+- Trustees site and Documents library access
+- governance document/folder retrieval
+- controlled-document metadata extraction
+- governance summary calculations
+- TeamFeePay report discovery/download
+- newest Season Report selection
+- membership/team/payment/registration aggregation
+- agreement aggregation
+- monthly subscription collection aggregation
 
-A future backend summary endpoint should calculate the live combined documentation health across all categories.
+## Security principles
 
-## Design Principles
+- Never commit Microsoft client secrets or session secrets.
+- Keep secrets in Railway/environment variables.
+- Graph access is read-only and restricted to the Trustees SharePoint site.
+- Protect trustee API routes with authenticated sessions.
+- Do not expose raw TeamFeePay personal/sensitive data through frontend APIs.
+- Keep detailed safeguarding information outside the general dashboard.
+- Add explicit trustee authorization/role controls before widening access.
+- Replace the default in-memory session store with production-grade persistent session storage as the platform matures.
 
-- Trudash is a trustee governance tool, not a replacement for the club's operational management platforms.
-- SharePoint is the source of truth for controlled documents.
-- Governance gaps should be visible rather than hidden.
-- Sensitive safeguarding information on the main dashboard should be aggregate/oversight information only.
-- Access should follow least-privilege principles.
-- Production changes should move through `develop` → pull request → `main`.
+## Commands
+
+```bash
+npm install
+npm run build
+npm start
+npm run test:sharepoint
+```
+
+The Express backend serves the production Vite build from `frontend/dist`. API/authentication routes must remain before the SPA fallback.
+
+## Design principle
+
+TruDash is a **governance layer**, not a replacement for TeamFeePay, SharePoint or an accounting platform.
+
+It should surface exceptions and trustee-level KPIs, preserve authoritative source systems, minimise personal-data storage, and make governance-control failures visible.
+
+## Near-term roadmap
+
+- Club Welfare
+- Finance Overview
+- Risk Register
+- Trustee decisions/actions
+- Compliance calendar
+- Conflicts register
+- Grants
+- Strategy / benefits tracking
+- PostgreSQL/Prisma governance data
+- stronger authorization
+- production-grade session storage
+- Trustee Governance Pack generation
+
+---
+
+**Organisation:** Wroughton & Wichelstowe FC  
+**Updated:** 23 September 2026
