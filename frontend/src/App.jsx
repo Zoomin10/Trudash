@@ -962,7 +962,7 @@ if (!auth.authenticated) {
     </div>
 
  <div className="module-card">
-  <div className="module-value">>
+  <div className="module-value">
         £{collectionSummary.totalOverdue.toFixed(2)}
       </div>
       <div className="module-title">
