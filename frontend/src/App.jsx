@@ -474,140 +474,114 @@ if (!auth.authenticated) {
             </div>
 
 
-            <section className="module-grid">
+            <section className="overview-kpi-grid">
 
-              <button
-                className="module-card"
-                onClick={() => {
-                  setCurrentSection("documentation");
-                  setCurrentTab("policies");
-                }}
-              >
-                <div className="module-title">
-                  Documentation
-                </div>
+  {/* SUBSCRIPTIONS */}
+  <button
+    className="overview-kpi-card"
+    onClick={() => {
+      setCurrentSection("members");
+      setCurrentTab("payments");
+    }}
+  >
+    <div className="overview-kpi-icon">
+      £
+    </div>
 
-               <div className="module-value">
- {documentationSummary?.incomplete ?? "—"}
+    <div className="overview-kpi-value">
+      —
+    </div>
 
-</div>
+    <div className="overview-kpi-title">
+      Subscription Collection
+    </div>
 
-                <div className="module-description">
-                  items require attention
-                </div>
-
-                <div className="module-link">
-                  View documentation →
-                </div>
-              </button>
-
-
-              <button
-                className="module-card"
-                onClick={() => {
-                  setCurrentSection("finance");
-                  setCurrentTab("overview");
-                }}
-              >
-                <div className="module-title">Finance</div>
-                <div className="module-value">—</div>
-
-                <div className="module-description">
-                  Not yet connected
-                </div>
-
-                <div className="module-link">
-                  View finance →
-                </div>
-              </button>
+    <div className="overview-kpi-detail">
+      Current financial year
+    </div>
+  </button>
 
 
-              <button
-                className="module-card"
-                onClick={() => {
-                  setCurrentSection("safeguarding");
-                  setCurrentTab("overview");
-                }}
-              >
-                <div className="module-title">Safeguarding</div>
-                <div className="module-value">—</div>
+  {/* MEMBERS */}
+  <button
+    className="overview-kpi-card"
+    onClick={() => {
+      setCurrentSection("members");
+      setCurrentTab("overview");
+    }}
+  >
+    <div className="overview-kpi-icon">
+      ♟
+    </div>
 
-                <div className="module-description">
-                  Not yet connected
-                </div>
+    <div className="overview-kpi-value">
+      {membersSummary?.totalMembers ?? "—"}
+    </div>
 
-                <div className="module-link">
-                  View safeguarding →
-                </div>
-              </button>
+    <div className="overview-kpi-title">
+      Members
+    </div>
 
-
-              <button
-                className="module-card"
-                onClick={() => {
-                  setCurrentSection("complaints");
-                  setCurrentTab("overview");
-                }}
-              >
-                <div className="module-title">Complaints</div>
-                <div className="module-value">—</div>
-
-                <div className="module-description">
-                  Not yet connected
-                </div>
-
-                <div className="module-link">
-                  View complaints →
-                </div>
-              </button>
+    <div className="overview-kpi-detail">
+      {membersSummary
+        ? `${membersSummary.membershipStatus?.Active ?? 0} active`
+        : "Loading membership data"}
+    </div>
+  </button>
 
 
-              <button
-                className="module-card"
-                onClick={() => {
-                  setCurrentSection("risk");
-                  setCurrentTab("risk-register");
-                }}
-              >
-                <div className="module-title">
-                  Risk & Compliance
-                </div>
+  {/* DOCUMENTATION */}
+  <button
+    className="overview-kpi-card"
+    onClick={() => {
+      setCurrentSection("documentation");
+      setCurrentTab("policies");
+    }}
+  >
+    <div className="overview-kpi-icon">
+      ▤
+    </div>
 
-                <div className="module-value">—</div>
+    <div className="overview-kpi-value">
+      {documentationSummary?.incomplete ?? "—"}
+    </div>
 
-                <div className="module-description">
-                  Not yet connected
-                </div>
+    <div className="overview-kpi-title">
+      Document Control
+    </div>
 
-                <div className="module-link">
-                  View risk & compliance →
-                </div>
-              </button>
+    <div className="overview-kpi-detail">
+      Require attention
+    </div>
+  </button>
 
 
-              <button
-                className="module-card"
-                onClick={() => {
-                  setCurrentSection("governance");
-                  setCurrentTab("trustees");
-                }}
-              >
-                <div className="module-title">
-                  Governance
-                </div>
+  {/* CLUB WELFARE */}
+  <button
+    className="overview-kpi-card"
+    onClick={() => {
+      setCurrentSection("safeguarding");
+      setCurrentTab("overview");
+    }}
+  >
+    <div className="overview-kpi-icon">
+      ◇
+    </div>
 
-                <div className="module-value">—</div>
+    <div className="overview-kpi-value">
+      —
+    </div>
 
-                <div className="module-description">
-                  Not yet connected
-                </div>
+    <div className="overview-kpi-title">
+      Club Welfare
+    </div>
 
-                <div className="module-link">
-                  View governance →
-                </div>
-              </button>
+    <div className="overview-kpi-detail">
+      Safeguarding & complaints
+    </div>
+  </button>
 
-            </section>
+</section>
 
           </>
         )}
