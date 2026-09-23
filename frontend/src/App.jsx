@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import DocumentRegister from "./components/DocumentRegister";
-
+import {
+  Scale,
+  Users,
+  ClipboardCheck,
+  ShieldCheck,
+} from "lucide-react";
 
 const documentationCategories = {
   policies: {
@@ -507,9 +512,9 @@ if (!auth.authenticated) {
       setCurrentTab("payments");
     }}
   >
-    <div className="overview-kpi-icon">
-      £
-    </div>
+   <div className="overview-kpi-icon">
+  <Scale size={24} strokeWidth={2} />
+</div>
 
    <div className="overview-kpi-value">
   {collectionSummary
@@ -549,9 +554,9 @@ if (!auth.authenticated) {
       setCurrentTab("overview");
     }}
   >
-    <div className="overview-kpi-icon">
-      ♟
-    </div>
+   <div className="overview-kpi-icon">
+  <Users size={24} strokeWidth={2} />
+</div>
 
     <div className="overview-kpi-value">
       {membersSummary?.totalMembers ?? "—"}
@@ -577,9 +582,9 @@ if (!auth.authenticated) {
       setCurrentTab("policies");
     }}
   >
-    <div className="overview-kpi-icon">
-      ▤
-    </div>
+<div className="overview-kpi-icon">
+  <ClipboardCheck size={24} strokeWidth={2} />
+</div>
 
     <div className="overview-kpi-value">
       {documentationSummary?.incomplete ?? "—"}
@@ -603,9 +608,9 @@ if (!auth.authenticated) {
       setCurrentTab("overview");
     }}
   >
-    <div className="overview-kpi-icon">
-      ◇
-    </div>
+  <div className="overview-kpi-icon">
+  <ShieldCheck size={24} strokeWidth={2} />
+</div>
 
     <div className="overview-kpi-value">
       —
@@ -860,6 +865,20 @@ if (!auth.authenticated) {
         </div>
       </div>
 
+<div className="module-card">
+  <div className="module-title">
+    Paused Memberships
+  </div>
+
+  <div className="module-value">
+    {membersSummary?.membershipStatus?.Paused ?? 0}
+  </div>
+
+  <div className="module-detail">
+    Memberships currently paused
+  </div>
+</div>
+
     </section>
 
     <section className="panel">
@@ -934,8 +953,52 @@ if (!auth.authenticated) {
 {/* Payments */}
 {currentTab === "payments" && (
   <>
-    <section className="module-grid">
+{collectionSummary && (
+  <section className="module-grid">
 
+
+    {/* Collection Success */}  
+ <div className="module-card">
+      <div className="module-value">
+        {collectionSummary.collectionRate}%
+      </div>
+      <div className="module-title">
+        Collection Success
+      </div>
+     <div className="module-detail">
+        Financial year to date
+      </div>
+    </div>
+
+    {/* Successful Collections */}
+   <div className="module-card">
+      <div className="module-value">
+        {collectionSummary.successfulCollections}
+      </div>
+    <div className="module-title">
+        Successful Collections
+      </div>
+     <div className="module-detail">
+        of {collectionSummary.totalCollections} due
+      </div>
+    </div>
+
+   {/* Club Overdue */} 
+ <div className="module-card">
+  <div className="module-value">
+        £{collectionSummary.totalOverdue.toFixed(2)}
+      </div>
+      <div className="module-title">
+        Club Overdue
+      </div>
+      <div className="module-detail">
+        Current FY position
+      </div>
+    </div>
+
+
+
+    {/* Club Received */}
       <div className="module-card">
         <div className="module-title">
           Club Received
@@ -958,7 +1021,7 @@ if (!auth.authenticated) {
         </div>
       </div>
 
-
+  {/* Paid by Members */}
       <div className="module-card">
         <div className="module-title">
           Paid by Members
@@ -981,75 +1044,7 @@ if (!auth.authenticated) {
         </div>
       </div>
 
-
-      <div className="module-card">
-        <div className="module-title">
-          Overdue
-        </div>
-
-        <div className="module-value">
-          {membersSummary?.payments
-            ? `£${membersSummary.payments.totalClubOverdue.toLocaleString(
-                "en-GB",
-                {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                }
-              )}`
-            : "—"}
-        </div>
-
-        <div className="module-description">
-          Currently overdue to the club
-        </div>
-      </div>
-
-
-      <div className="module-card">
-        <div className="module-title">
-          Collections Paid
-        </div>
-
-        <div className="module-value">
-          {membersSummary?.payments?.collectionsPaid ?? "—"}
-        </div>
-
-        <div className="module-description">
-          Completed collections
-        </div>
-      </div>
-
-
-      <div className="module-card">
-        <div className="module-title">
-          Future Collections (this FY)
-        </div>
-
-        <div className="module-value">
-          {membersSummary?.payments?.collectionsPending ?? "—"}
-        </div>
-
-        <div className="module-description">
-          Scheduled / pending collections
-        </div>
-      </div>
-
-
-      <div className="module-card">
-        <div className="module-title">
-          Paused Memberships
-        </div>
-
-        <div className="module-value">
-          {membersSummary?.membershipStatus?.Paused ?? 0}
-        </div>
-
-        <div className="module-description">
-          Memberships currently paused
-        </div>
-      </div>
-
-
+    {/* Discounted Memberships */}
       <div className="module-card">
         <div className="module-title">
           Discounted Memberships
@@ -1064,8 +1059,58 @@ if (!auth.authenticated) {
         </div>
       </div>
 
-    </section>
+   
+  </section>
+)}
 
+{collectionSummary?.months?.length > 0 && (
+  <section className="panel">
+    <div className="panel-header">
+      <h2>Monthly Collection History</h2>
+      <p>
+        Subscription collection performance for each TeamFeePay
+        collection cycle.
+      </p>
+    </div>
+
+    <div className="policy-table-wrapper">
+      <table className="policy-table collection-history-table">
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th>Collections</th>
+            <th>Successful</th>
+            <th>Failed</th>
+            <th>Success Rate</th>
+            <th>Club Overdue</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {collectionSummary.months.map((month) => (
+            <tr key={month.month}>
+              <td>
+                {new Date(`${month.month}-01`).toLocaleDateString(
+                  "en-GB",
+                  {
+                    month: "long",
+                    year: "numeric",
+                  }
+                )}
+              </td>
+
+              <td>{month.collections}</td>
+              <td>{month.successful}</td>
+              <td>{month.failed}</td>
+              <td>{month.collectionRate}%</td>
+              <td>£{month.overdue.toFixed(2)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+)}
 
     <section className="panel">
       <div className="panel-header">

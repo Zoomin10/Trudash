@@ -911,6 +911,31 @@ margin: 24px auto 0;
   color: #6b7280;
 }
 
+/* Monthly collection history */
+
+.collection-history-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.collection-history-table th:first-child,
+.collection-history-table td:first-child {
+  width: 30%;
+  text-align: left;
+}
+
+.collection-history-table th:not(:first-child),
+.collection-history-table td:not(:first-child) {
+  width: 14;
+  text-align: center;
+}
+
+.collection-history-table th,
+.collection-history-table td {
+  padding: 14px 10px;
+  white-space: nowrap;
+}
+
 
 /* Tablet / mobile */
 
