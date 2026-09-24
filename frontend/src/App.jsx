@@ -4,9 +4,21 @@ import DocumentRegister from "./components/DocumentRegister";
 import {
   Scale,
   Users,
+  UsersRound,
+  BicepsFlexed,
   ClipboardCheck,
   ShieldCheck,
 } from "lucide-react";
+
+import {
+  HandCoinsIcon,
+  UsersThreeIcon,
+  SoccerBallIcon,
+  HandHeartIcon,
+  FilesIcon,
+  ShieldCheckIcon as PhosphorShieldCheckIcon,
+} from "@phosphor-icons/react";
+
 
 const documentationCategories = {
   policies: {
@@ -63,11 +75,32 @@ const [membersSummary, setMembersSummary] = useState(null);
 const [agreementsSummary, setAgreementsSummary] = useState(null);
 const [collectionSummary, setCollectionSummary] = useState(null);
 const [complaintsSummary, setComplaintsSummary] = useState(null);
+const [volunteerSummary, setVolunteerSummary] = useState(null);
 const [auth, setAuth] = useState({
   loading: true,
   authenticated: false,
   user: null,
 });
+
+useEffect(() => {
+  if (!auth.authenticated) return;
+
+  fetch("/api/members/volunteers")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to load volunteer summary");
+      }
+
+      return response.json();
+    })
+    .then((data) => setVolunteerSummary(data))
+    .catch((error) =>
+      console.error(
+        "Failed to load volunteer summary:",
+        error
+      )
+    );
+}, [auth.authenticated]);
 
 useEffect(() => {
   if (!auth.authenticated) return;
@@ -524,8 +557,8 @@ if (!auth.authenticated) {
       setCurrentTab("payments");
     }}
   >
-   <div className="overview-kpi-icon">
-  <Scale size={30} strokeWidth={2} />
+<div className="overview-kpi-icon-phosphor icon-subscriptions">
+  <HandCoinsIcon size={38} weight="duotone" />
 </div>
 
    <div className="overview-kpi-value">
@@ -566,8 +599,8 @@ if (!auth.authenticated) {
       setCurrentTab("overview");
     }}
   >
-   <div className="overview-kpi-icon">
-  <Users size={30} strokeWidth={2} />
+ <div className="overview-kpi-icon-phosphor icon-members">
+  <UsersThreeIcon size={38} weight="duotone" />
 </div>
 
     <div className="overview-kpi-value">
@@ -585,6 +618,57 @@ if (!auth.authenticated) {
     </div>
   </button>
 
+{/* TEAMS */}
+<button
+  className="overview-kpi-card"
+  onClick={() => {
+    setCurrentSection("members");
+    setCurrentTab("teams");
+  }}
+>
+<div className="overview-kpi-icon-phosphor icon-teams">
+  <SoccerBallIcon size={38} weight="duotone" />
+</div>
+
+  <div className="overview-kpi-value">
+    {membersSummary?.teams
+      ? Object.keys(membersSummary.teams).length
+      : "—"}
+  </div>
+
+  <div className="overview-kpi-title">
+    Teams
+  </div>
+
+  <div className="overview-kpi-detail">
+    Registered in TeamFeePay
+  </div>
+</button>
+
+{/* VOLUNTEERS */}
+<button
+  className="overview-kpi-card"
+  onClick={() => {
+    setCurrentSection("members");
+    setCurrentTab("overview");
+  }}
+>
+<div className="overview-kpi-icon-phosphor icon-volunteers">
+  <HandHeartIcon size={38} weight="duotone" />
+</div>
+
+  <div className="overview-kpi-value">
+    {volunteerSummary?.volunteers ?? "—"}
+  </div>
+
+  <div className="overview-kpi-title">
+    Volunteers
+  </div>
+
+  <div className="overview-kpi-detail">
+    Registered in TeamFeePay
+  </div>
+</button>
 
   {/* DOCUMENTATION */}
  <button
@@ -594,9 +678,9 @@ if (!auth.authenticated) {
     setCurrentTab("policies");
   }}
 >
-  <div className="overview-kpi-icon">
-    <ClipboardCheck size={30} strokeWidth={2} />
-  </div>
+<div className="overview-kpi-icon-phosphor icon-documents">
+  <FilesIcon size={38} weight="duotone" />
+</div>
 
   <div className="overview-kpi-value">
     {documentationSummary?.total ?? "—"}
@@ -621,9 +705,9 @@ if (!auth.authenticated) {
     setCurrentTab("overview");
   }}
 >
-  <div className="overview-kpi-icon">
-    <ShieldCheck size={30} strokeWidth={2} />
-  </div>
+<div className="overview-kpi-icon-phosphor icon-welfare">
+  <PhosphorShieldCheckIcon size={38} weight="duotone" />
+</div>
 
   <div className="overview-kpi-value">
     {complaintsSummary

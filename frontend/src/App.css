@@ -863,7 +863,7 @@ button.document-card:hover {
 
 .overview-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   margin-top: 24px;
 }
@@ -1178,4 +1178,39 @@ button.document-card:hover {
   padding: 24px;
   margin: 0;
   color: #64748b;
+}
+/* =====================================================
+   OVERVIEW KPI PHOSPHOR ICONS
+===================================================== */
+
+.overview-kpi-icon-phosphor {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  margin-bottom: 14px;
+}
+
+.icon-subscriptions {
+  color: #16803c;
+}
+
+.icon-members {
+  color: #2563eb;
+}
+
+.icon-teams {
+  color: #7c3aed;
+}
+
+.icon-volunteers {
+  color: #ea580c;
+}
+
+.icon-documents {
+  color: #0f766e;
+}
+
+.icon-welfare {
+  color: #4f46e5;
 }

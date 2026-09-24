@@ -432,6 +432,88 @@ async function getTeamFeePayWorkbook(fileId) {
   });
 }
 
+async function getTeamFeePayVolunteerSummary() {
+  const reports = await getTeamFeePayReports();
+
+  const volunteerReports = reports
+    .filter((report) =>
+      report.name
+        .toLowerCase()
+        .includes("user roles - teamfeepay")
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.lastModifiedDateTime) -
+        new Date(a.lastModifiedDateTime)
+    );
+
+  const volunteerReport = volunteerReports[0];
+
+  if (!volunteerReport) {
+    throw new Error(
+      "TeamFeePay User Roles report not found."
+    );
+  }
+
+  const workbook = await getTeamFeePayWorkbook(
+    volunteerReport.id
+  );
+
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+
+  if (!worksheet) {
+    throw new Error(
+      "Worksheet not found in TeamFeePay User Roles report."
+    );
+  }
+
+  const rows = XLSX.utils.sheet_to_json(worksheet, {
+    header: 1,
+    defval: null,
+    blankrows: false,
+  });
+
+  // Row 1 is the report title.
+  // Row 2 contains the actual column headings.
+  const headers = rows[1];
+  const dataRows = rows.slice(2);
+
+  const userColumn = headers.indexOf("User");
+  const roleColumn = headers.indexOf("Role");
+
+  if (userColumn === -1 || roleColumn === -1) {
+    throw new Error(
+      "Expected User or Role column not found in TeamFeePay User Roles report."
+    );
+  }
+
+  const volunteerRows = dataRows.filter((row) => {
+    const user = row[userColumn];
+    const role = row[roleColumn];
+
+    return (
+      user !== null &&
+      user !== undefined &&
+      String(user).trim() !== "" &&
+      role !== null &&
+      role !== undefined &&
+      String(role).trim() !== ""
+    );
+  });
+
+  const uniqueUsers = new Set(
+    volunteerRows.map((row) =>
+      String(row[userColumn])
+        .trim()
+        .toLowerCase()
+    )
+  );
+
+  return {
+    volunteers: uniqueUsers.size,
+  };
+}
 
 async function getTeamFeePaySeasonSummary() {
   const reports = await getTeamFeePayReports();
@@ -998,6 +1080,7 @@ module.exports = {
   getTeamFeePayReports,
   getTeamFeePayWorkbook,
   getTeamFeePaySeasonSummary,
+  getTeamFeePayVolunteerSummary,
 getTeamFeePayAgreementSummary, 
 getTeamFeePayCollectionSummary,
 getComplaintsSummary,
