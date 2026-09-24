@@ -76,6 +76,7 @@ const [agreementsSummary, setAgreementsSummary] = useState(null);
 const [collectionSummary, setCollectionSummary] = useState(null);
 const [complaintsSummary, setComplaintsSummary] = useState(null);
 const [volunteerSummary, setVolunteerSummary] = useState(null);
+const [familySummary, setFamilySummary] = useState(null);
 const [auth, setAuth] = useState({
   loading: true,
   authenticated: false,
