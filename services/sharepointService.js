@@ -936,6 +936,98 @@ const overdue =
     months,
   };
 }
+async function getTeamFeePayFamilySummary() {
+  const reports = await getTeamFeePayReports();
+
+  const memberReports = reports
+    .filter((report) =>
+      report.name
+        .toLowerCase()
+        .includes("members - teamfeepay")
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.lastModifiedDateTime) -
+        new Date(a.lastModifiedDateTime)
+    );
+
+  const memberReport = memberReports[0];
+
+  if (!memberReport) {
+    throw new Error(
+      "TeamFeePay Members report not found."
+    );
+  }
+
+  const workbook = await getTeamFeePayWorkbook(
+    memberReport.id
+  );
+
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+
+  if (!worksheet) {
+    throw new Error(
+      "Worksheet not found in TeamFeePay Members report."
+    );
+  }
+
+  const rows = XLSX.utils.sheet_to_json(worksheet, {
+    header: 1,
+    defval: null,
+    blankrows: false,
+  });
+
+  // Row 1 contains the report title.
+  // Row 2 contains the actual column headings.
+  const headers = rows[1];
+  const dataRows = rows.slice(2);
+
+  const userColumn = headers.indexOf("User");
+  const memberColumn = headers.indexOf("Member");
+  const familySizeColumn = headers.indexOf(
+    "Members in Family"
+  );
+
+  if (
+    userColumn === -1 ||
+    memberColumn === -1 ||
+    familySizeColumn === -1
+  ) {
+    throw new Error(
+      "Expected family columns not found in TeamFeePay Members report."
+    );
+  }
+
+  const familyRows = dataRows.filter((row) => {
+    const user = row[userColumn];
+    const member = row[memberColumn];
+    const familySize = Number(row[familySizeColumn]);
+
+    return (
+      user !== null &&
+      user !== undefined &&
+      String(user).trim() !== "" &&
+      member !== null &&
+      member !== undefined &&
+      String(member).trim() !== "" &&
+      familySize > 1
+    );
+  });
+
+  const uniqueFamilies = new Set(
+    familyRows.map((row) =>
+      String(row[userColumn])
+        .trim()
+        .toLowerCase()
+    )
+  );
+
+  return {
+    familyGroups: uniqueFamilies.size,
+    membersInFamilyGroups: familyRows.length,
+  };
+}
 
 async function getTeamFeePayAgreementSummary() {
   const reports = await getTeamFeePayReports();
@@ -1081,6 +1173,7 @@ module.exports = {
   getTeamFeePayWorkbook,
   getTeamFeePaySeasonSummary,
   getTeamFeePayVolunteerSummary,
+  getTeamFeePayFamilySummary,
 getTeamFeePayAgreementSummary, 
 getTeamFeePayCollectionSummary,
 getComplaintsSummary,
