@@ -9,19 +9,16 @@ import {
   ClipboardCheck,
   ShieldCheck,
 } from "lucide-react";
+
 import {
-  CurrencyGbp,
-  UsersThree,
-  SoccerBall,
-  HandHeart,
-  Files,
-  ShieldCheck as PhosphorShieldCheck,
   CurrencyGbpIcon,
   UsersThreeIcon,
   SoccerBallIcon,
   HandHeartIcon,
   FilesIcon,
+  ShieldCheckIcon as PhosphorShieldCheckIcon,
 } from "@phosphor-icons/react";
+
 
 const documentationCategories = {
   policies: {
