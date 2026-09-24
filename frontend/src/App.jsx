@@ -106,6 +106,29 @@ useEffect(() => {
 useEffect(() => {
   if (!auth.authenticated) return;
 
+  fetch("/api/members/families")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to load family summary");
+      }
+
+      return response.json();
+    })
+    .then((data) => {
+    
+      setFamilySummary(data);
+    })
+    .catch((error) => {
+      console.error(
+        "Failed to load family summary:",
+        error
+      );
+    });
+}, [auth.authenticated]);
+
+useEffect(() => {
+  if (!auth.authenticated) return;
+
   fetch("/api/members/collections")
     .then((response) => {
       if (!response.ok) {
