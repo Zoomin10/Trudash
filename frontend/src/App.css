@@ -1179,3 +1179,38 @@ button.document-card:hover {
   margin: 0;
   color: #64748b;
 }
+/* =====================================================
+   OVERVIEW KPI PHOSPHOR ICONS
+===================================================== */
+
+.overview-kpi-icon-phosphor {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  margin-bottom: 14px;
+}
+
+.icon-subscriptions {
+  color: #16803c;
+}
+
+.icon-members {
+  color: #2563eb;
+}
+
+.icon-teams {
+  color: #7c3aed;
+}
+
+.icon-volunteers {
+  color: #ea580c;
+}
+
+.icon-documents {
+  color: #0f766e;
+}
+
+.icon-welfare {
+  color: #4f46e5;
+}

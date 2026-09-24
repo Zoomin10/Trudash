@@ -9,6 +9,19 @@ import {
   ClipboardCheck,
   ShieldCheck,
 } from "lucide-react";
+import {
+  CurrencyGbp,
+  UsersThree,
+  SoccerBall,
+  HandHeart,
+  Files,
+  ShieldCheck as PhosphorShieldCheck,
+  CurrencyGbpIcon,
+  UsersThreeIcon,
+  SoccerBallIcon,
+  HandHeartIcon,
+  FilesIcon,
+} from "@phosphor-icons/react";
 
 const documentationCategories = {
   policies: {
@@ -547,8 +560,8 @@ if (!auth.authenticated) {
       setCurrentTab("payments");
     }}
   >
-   <div className="overview-kpi-icon">
-  <Scale size={30} strokeWidth={2} />
+<div className="overview-kpi-icon-phosphor icon-subscriptions">
+  <CurrencyGbpIcon size={38} weight="duotone" />
 </div>
 
    <div className="overview-kpi-value">
@@ -589,8 +602,8 @@ if (!auth.authenticated) {
       setCurrentTab("overview");
     }}
   >
-   <div className="overview-kpi-icon">
-  <Users size={30} strokeWidth={2} />
+ <div className="overview-kpi-icon-phosphor icon-members">
+  <UsersThreeIcon size={38} weight="duotone" />
 </div>
 
     <div className="overview-kpi-value">
@@ -616,9 +629,9 @@ if (!auth.authenticated) {
     setCurrentTab("teams");
   }}
 >
-  <div className="overview-kpi-icon">
-    <Users size={30} strokeWidth={2} />
-  </div>
+<div className="overview-kpi-icon-phosphor icon-teams">
+  <SoccerBallIcon size={38} weight="duotone" />
+</div>
 
   <div className="overview-kpi-value">
     {membersSummary?.teams
@@ -643,9 +656,9 @@ if (!auth.authenticated) {
     setCurrentTab("overview");
   }}
 >
-  <div className="overview-kpi-icon">
-  <BicepsFlexed size={30} strokeWidth={2} />
-  </div>
+<div className="overview-kpi-icon-phosphor icon-volunteers">
+  <HandHeartIcon size={38} weight="duotone" />
+</div>
 
   <div className="overview-kpi-value">
     {volunteerSummary?.volunteers ?? "—"}
@@ -668,9 +681,9 @@ if (!auth.authenticated) {
     setCurrentTab("policies");
   }}
 >
-  <div className="overview-kpi-icon">
-    <ClipboardCheck size={30} strokeWidth={2} />
-  </div>
+<div className="overview-kpi-icon-phosphor icon-documents">
+  <FilesIcon size={38} weight="duotone" />
+</div>
 
   <div className="overview-kpi-value">
     {documentationSummary?.total ?? "—"}
@@ -695,9 +708,9 @@ if (!auth.authenticated) {
     setCurrentTab("overview");
   }}
 >
-  <div className="overview-kpi-icon">
-    <ShieldCheck size={30} strokeWidth={2} />
-  </div>
+<div className="overview-kpi-icon-phosphor icon-welfare">
+  <PhosphorShieldCheckIcon size={38} weight="duotone" />
+</div>
 
   <div className="overview-kpi-value">
     {complaintsSummary
