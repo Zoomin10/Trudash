@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 import {
-  CurrencyGbpIcon,
+  HandCoinsIcon,
   UsersThreeIcon,
   SoccerBallIcon,
   HandHeartIcon,
@@ -558,7 +558,7 @@ if (!auth.authenticated) {
     }}
   >
 <div className="overview-kpi-icon-phosphor icon-subscriptions">
-  <CurrencyGbpIcon size={38} weight="duotone" />
+  <HandCoinsIcon size={38} weight="duotone" />
 </div>
 
    <div className="overview-kpi-value">
