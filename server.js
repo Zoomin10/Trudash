@@ -12,6 +12,7 @@ const {
   getTeamFeePayAgreementSummary,
   getTeamFeePayCollectionSummary,
   getComplaintsSummary,
+  getTeamFeePayFamilySummary,
   getTeamFeePayVolunteerSummary,
   inspectTeamFeePayAgreementReport,
 } = require("./services/sharepointService");
@@ -287,6 +288,30 @@ app.get("/api/documentation/:category", requireAuth, async (req, res) => {
     });
   }
 });
+
+app.get(
+  "/api/members/families",
+  requireAuth,
+  async (req, res) => {
+    try {
+      const summary =
+        await getTeamFeePayFamilySummary();
+
+      res.json(summary);
+    } catch (error) {
+      console.error(
+        "Unable to load TeamFeePay family summary:",
+        error.message
+      );
+
+      res.status(500).json({
+        error:
+          "Unable to load TeamFeePay family summary.",
+      });
+    }
+  }
+);
+
 app.get(
   "/api/members/volunteers",
   requireAuth,

@@ -76,6 +76,7 @@ const [agreementsSummary, setAgreementsSummary] = useState(null);
 const [collectionSummary, setCollectionSummary] = useState(null);
 const [complaintsSummary, setComplaintsSummary] = useState(null);
 const [volunteerSummary, setVolunteerSummary] = useState(null);
+const [familySummary, setFamilySummary] = useState(null);
 const [auth, setAuth] = useState({
   loading: true,
   authenticated: false,
@@ -100,6 +101,29 @@ useEffect(() => {
         error
       )
     );
+}, [auth.authenticated]);
+
+useEffect(() => {
+  if (!auth.authenticated) return;
+
+  fetch("/api/members/families")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to load family summary");
+      }
+
+      return response.json();
+    })
+    .then((data) => {
+    
+      setFamilySummary(data);
+    })
+    .catch((error) => {
+      console.error(
+        "Failed to load family summary:",
+        error
+      );
+    });
 }, [auth.authenticated]);
 
 useEffect(() => {
@@ -904,22 +928,21 @@ if (!auth.authenticated) {
         </div>
       </div>
 
+<div className="module-card">
+  <div className="module-title">
+    Family Groups
+  </div>
 
-      <div className="module-card">
-        <div className="module-title">
-          Teams
-        </div>
+  <div className="module-value">
+    {familySummary?.familyGroups ?? "—"}
+  </div>
 
-        <div className="module-value">
-          {membersSummary?.teams
-            ? Object.keys(membersSummary.teams).length
-            : "—"}
-        </div>
-
-        <div className="module-description">
-          TeamFeePay team assignments
-        </div>
-      </div>
+  <div className="module-description">
+    {familySummary
+      ? `${familySummary.membersInFamilyGroups} members`
+      : "Family memberships in TeamFeePay"}
+  </div>
+</div>
 
 
       <div className="module-card">
