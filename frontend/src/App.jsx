@@ -4,7 +4,8 @@ import DocumentRegister from "./components/DocumentRegister";
 import {
   Scale,
   Users,
-    UsersRound,
+  UsersRound,
+  BicepsFlexed,
   ClipboardCheck,
   ShieldCheck,
 } from "lucide-react";
@@ -607,6 +608,33 @@ if (!auth.authenticated) {
     </div>
   </button>
 
+{/* TEAMS */}
+<button
+  className="overview-kpi-card"
+  onClick={() => {
+    setCurrentSection("members");
+    setCurrentTab("teams");
+  }}
+>
+  <div className="overview-kpi-icon">
+    <Users size={30} strokeWidth={2} />
+  </div>
+
+  <div className="overview-kpi-value">
+    {membersSummary?.teams
+      ? Object.keys(membersSummary.teams).length
+      : "—"}
+  </div>
+
+  <div className="overview-kpi-title">
+    Teams
+  </div>
+
+  <div className="overview-kpi-detail">
+    Registered in TeamFeePay
+  </div>
+</button>
+
 {/* VOLUNTEERS */}
 <button
   className="overview-kpi-card"
@@ -616,7 +644,7 @@ if (!auth.authenticated) {
   }}
 >
   <div className="overview-kpi-icon">
-    <UsersRound size={30} strokeWidth={2} />
+  <BicepsFlexed size={30} strokeWidth={2} />>
   </div>
 
   <div className="overview-kpi-value">
