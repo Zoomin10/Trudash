@@ -63,11 +63,32 @@ const [membersSummary, setMembersSummary] = useState(null);
 const [agreementsSummary, setAgreementsSummary] = useState(null);
 const [collectionSummary, setCollectionSummary] = useState(null);
 const [complaintsSummary, setComplaintsSummary] = useState(null);
+const [volunteerSummary, setVolunteerSummary] = useState(null);
 const [auth, setAuth] = useState({
   loading: true,
   authenticated: false,
   user: null,
 });
+
+useEffect(() => {
+  if (!auth.authenticated) return;
+
+  fetch("/api/members/volunteers")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to load volunteer summary");
+      }
+
+      return response.json();
+    })
+    .then((data) => setVolunteerSummary(data))
+    .catch((error) =>
+      console.error(
+        "Failed to load volunteer summary:",
+        error
+      )
+    );
+}, [auth.authenticated]);
 
 useEffect(() => {
   if (!auth.authenticated) return;
