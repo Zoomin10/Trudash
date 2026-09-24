@@ -904,22 +904,21 @@ if (!auth.authenticated) {
         </div>
       </div>
 
+<div className="module-card">
+  <div className="module-title">
+    Family Groups
+  </div>
 
-      <div className="module-card">
-        <div className="module-title">
-          Teams
-        </div>
+  <div className="module-value">
+    {familySummary?.familyGroups ?? "—"}
+  </div>
 
-        <div className="module-value">
-          {membersSummary?.teams
-            ? Object.keys(membersSummary.teams).length
-            : "—"}
-        </div>
-
-        <div className="module-description">
-          TeamFeePay team assignments
-        </div>
-      </div>
+  <div className="module-description">
+    {familySummary
+      ? `${familySummary.membersInFamilyGroups} members`
+      : "Family memberships in TeamFeePay"}
+  </div>
+</div>
 
 
       <div className="module-card">
