@@ -644,7 +644,7 @@ if (!auth.authenticated) {
   }}
 >
   <div className="overview-kpi-icon">
-  <BicepsFlexed size={30} strokeWidth={2} />>
+  <BicepsFlexed size={30} strokeWidth={2} />
   </div>
 
   <div className="overview-kpi-value">
