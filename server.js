@@ -12,6 +12,7 @@ const {
   getTeamFeePayAgreementSummary,
   getTeamFeePayCollectionSummary,
   getComplaintsSummary,
+  getTeamFeePayVolunteerSummary,
   inspectTeamFeePayAgreementReport,
 } = require("./services/sharepointService");
 const app = express();
@@ -286,6 +287,28 @@ app.get("/api/documentation/:category", requireAuth, async (req, res) => {
     });
   }
 });
+app.get(
+  "/api/members/volunteers",
+  requireAuth,
+  async (req, res) => {
+    try {
+      const summary =
+        await getTeamFeePayVolunteerSummary();
+
+      res.json(summary);
+    } catch (error) {
+      console.error(
+        "Failed to load volunteer summary:",
+        error
+      );
+
+      res.status(500).json({
+        error: "Failed to load volunteer summary",
+      });
+    }
+  }
+);
+
 app.get(
   "/api/members/agreements",
   requireAuth,
