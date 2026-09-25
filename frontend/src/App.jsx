@@ -1000,7 +1000,7 @@ if (!auth.authenticated) {
     {membersSummary?.membershipStatus?.Paused ?? 0}
   </div>
 
-  <div className="module-detail">
+  <div className="module-description">
     Memberships currently paused
   </div>
 </div>
