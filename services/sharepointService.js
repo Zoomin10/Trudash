@@ -1047,29 +1047,24 @@ async function getAgreementDocumentVersions() {
       getDocumentMetadata(document)
     )
   );
-console.log(
-  "Agreement metadata:",
-  metadata.map((document) => ({
-    name: document.name,
-    controlledVersion: document.controlledVersion,
-  }))
-);
-  const agreementMappings = {
-    "WWFC Member Terms & Conditions":
-      "WWFC Player Membership Terms and Conditions",
 
-    "Adult Code of Conduct":
-      "Adult Player Code",
 
-    "Coaches and Managers Code of Conduct":
-      "Coach Code",
+const agreementMappings = {
+  "WWFC Member Terms & Conditions":
+    "WWFC_Player_Membership_Terms_and_Conditions",
 
-    "Parents Code of Conduct":
-      "Parent/Carer Code",
+  "Adult Code of Conduct":
+    "POL005",
 
-    "Young Player Code of Conduct":
-      "Youth Player Code",
-  };
+  "Coaches and Managers Code of Conduct":
+    "POL003",
+
+  "Parents Code of Conduct":
+    "POL002",
+
+  "Young Player Code of Conduct":
+    "POL004",
+};
 
   const versions = {};
 
