@@ -77,6 +77,7 @@ const [collectionSummary, setCollectionSummary] = useState(null);
 const [complaintsSummary, setComplaintsSummary] = useState(null);
 const [volunteerSummary, setVolunteerSummary] = useState(null);
 const [familySummary, setFamilySummary] = useState(null);
+const [selectedAgreement, setSelectedAgreement] = useState(null);
 const [auth, setAuth] = useState({
   loading: true,
   authenticated: false,
@@ -1355,7 +1356,19 @@ if (!auth.authenticated) {
   <td>{agreement.documentName}</td>
   <td>{agreement.version || "—"}</td>
   <td>{agreement.signed}</td>
-  <td>{agreement.pending}</td>
+ <td>
+  {agreement.pending > 0 ? (
+    <button
+      type="button"
+      className="agreement-pending-link"
+      onClick={() => setSelectedAgreement(agreement)}
+    >
+      {agreement.pending}
+    </button>
+  ) : (
+    "0"
+  )}
+</td>
                 <td>
   <div className="agreement-progress">
     <div className="agreement-progress-bar">
