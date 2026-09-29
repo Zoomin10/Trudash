@@ -1329,7 +1329,7 @@ if (!auth.authenticated) {
         <p>Loading agreement data...</p>
       ) : (
         <div className="policy-table-wrapper">
-          <table className="policy-table">
+         <table className="policy-table agreements-table">
           <thead>
   <tr>
     <th>Agreement</th>
