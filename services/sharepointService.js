@@ -1029,7 +1029,63 @@ async function getTeamFeePayFamilySummary() {
   };
 }
 
+async function getAgreementDocumentVersions() {
+  const policyDocuments = await getPolicyDocuments();
+
+  const governanceDocuments =
+    await getDocumentsFromGovernanceFolder(
+      "Governance Docs/Doc versions"
+    );
+
+  const documents = [
+    ...policyDocuments,
+    ...governanceDocuments,
+  ];
+
+  const metadata = await Promise.all(
+    documents.map((document) =>
+      getDocumentMetadata(document)
+    )
+  );
+
+  const agreementMappings = {
+    "WWFC Member Terms & Conditions":
+      "WWFC Player Membership Terms and Conditions",
+
+    "Adult Code of Conduct":
+      "Adult Player Code",
+
+    "Coaches and Managers Code of Conduct":
+      "Coach Code",
+
+    "Parents Code of Conduct":
+      "Parent/Carer Code",
+
+    "Young Player Code of Conduct":
+      "Youth Player Code",
+  };
+
+  const versions = {};
+
+  for (const [agreementName, documentName] of Object.entries(
+    agreementMappings
+  )) {
+    const match = metadata.find((document) =>
+      document.name
+        ?.toLowerCase()
+        .includes(documentName.toLowerCase())
+    );
+
+    versions[agreementName] =
+      match?.controlledVersion || null;
+  }
+
+  return versions;
+}
+
 async function getTeamFeePayAgreementSummary() {
+    const agreementVersions =
+    await getAgreementDocumentVersions();
   const reports = await getTeamFeePayReports();
 
   const agreementReports = reports
@@ -1116,14 +1172,16 @@ for (const row of notSignedRows) {
     .map((agreement) => {
       const total = agreement.signed + agreement.pending;
 
-      return {
-        ...agreement,
-        total,
-        completionPercentage:
-          total > 0
-            ? Math.round((agreement.signed / total) * 100)
-            : 0,
-      };
+ return {
+  ...agreement,
+  version:
+    agreementVersions[agreement.documentName] || null,
+  total,
+  completionPercentage:
+    total > 0
+      ? Math.round((agreement.signed / total) * 100)
+      : 0,
+};
     })
     .sort((a, b) =>
       a.documentName.localeCompare(b.documentName)
