@@ -1330,14 +1330,15 @@ if (!auth.authenticated) {
       ) : (
         <div className="policy-table-wrapper">
           <table className="policy-table">
-            <thead>
-              <tr>
-                <th>Agreement</th>
-                <th>Signed</th>
-                <th>Pending</th>
-                <th>Completion</th>
-              </tr>
-            </thead>
+          <thead>
+  <tr>
+    <th>Agreement</th>
+    <th>Version</th>
+    <th>Signed</th>
+    <th>Pending</th>
+    <th>Completion</th>
+  </tr>
+</thead>
 
             <tbody>
             {[...agreementsSummary.agreements]
@@ -1350,10 +1351,11 @@ if (!auth.authenticated) {
     return 0;
   })
   .map((agreement) => (
-                <tr key={agreement.documentName}>
-                  <td>{agreement.documentName}</td>
-                  <td>{agreement.signed}</td>
-                  <td>{agreement.pending}</td>
+               <tr key={agreement.documentName}>
+  <td>{agreement.documentName}</td>
+  <td>{agreement.version || "—"}</td>
+  <td>{agreement.signed}</td>
+  <td>{agreement.pending}</td>
                 <td>
   <div className="agreement-progress">
     <div className="agreement-progress-bar">
