@@ -1041,7 +1041,10 @@ async function getAgreementDocumentVersions() {
     ...policyDocuments,
     ...governanceDocuments,
   ];
-
+console.log(
+  "Agreement source documents:",
+  documents.map((document) => document.name)
+);
   const metadata = await Promise.all(
     documents.map((document) =>
       getDocumentMetadata(document)
