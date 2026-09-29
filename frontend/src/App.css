@@ -153,6 +153,10 @@ body {
   letter-spacing: 0.04em;
   border-bottom: 1px solid #e5e7eb;
 }
+.policy-table th,
+.policy-table td {
+  box-sizing: border-box;
+}
 
 .policy-table td {
   padding: 15px 12px;
@@ -825,6 +829,33 @@ button.document-card:hover {
 }
 
 /* Scrollable table wrapper */
+
+/* Member Agreements table */
+
+.agreements-table th:nth-child(1),
+.agreements-table td:nth-child(1) {
+  width: 48%;
+}
+
+.agreements-table th:nth-child(2),
+.agreements-table td:nth-child(2) {
+  width: 10%;
+}
+
+.agreements-table th:nth-child(3),
+.agreements-table td:nth-child(3) {
+  width: 10%;
+}
+
+.agreements-table th:nth-child(4),
+.agreements-table td:nth-child(4) {
+  width: 12%;
+}
+
+.agreements-table th:nth-child(5),
+.agreements-table td:nth-child(5) {
+  width: 20%;
+}
 
 .policy-table-wrapper {
   width: 100%;
