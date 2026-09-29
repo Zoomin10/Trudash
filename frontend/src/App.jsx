@@ -1324,6 +1324,9 @@ if (!auth.authenticated) {
           Current acceptance status of club membership terms and
           codes of conduct recorded in TeamFeePay.
         </p>
+           <p>
+         Click on the PENDING entries to see the member details.
+        </p>
       </div>
 
       {!agreementsSummary ? (
