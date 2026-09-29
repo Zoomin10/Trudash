@@ -1034,7 +1034,7 @@ async function getAgreementDocumentVersions() {
 
   const governanceDocuments =
     await getDocumentsFromGovernanceFolder(
-      "Governance Docs/Doc versions"
+      "Governance Documents/Doc versions"
     );
 
   const documents = [
