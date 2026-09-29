@@ -1134,14 +1134,14 @@ for (const row of signedRows) {
 
   const cleanName = String(documentName).trim();
 
-  if (!agreements[cleanName]) {
-    agreements[cleanName] = {
-      documentName: cleanName,
-      signed: 0,
-      pending: 0,
-    };
-  }
-
+if (!agreements[cleanName]) {
+  agreements[cleanName] = {
+    documentName: cleanName,
+    signed: 0,
+    pending: 0,
+    pendingMembers: [],
+  };
+}
   agreements[cleanName].signed += 1;
 }
 
@@ -1158,16 +1158,22 @@ for (const row of notSignedRows) {
     .filter(Boolean);
 
   for (const documentName of documentNames) {
-    if (!agreements[documentName]) {
-      agreements[documentName] = {
-        documentName,
-        signed: 0,
-        pending: 0,
-      };
-    }
+  if (!agreements[documentName]) {
+  agreements[documentName] = {
+    documentName,
+    signed: 0,
+    pending: 0,
+    pendingMembers: [],
+  };
+}
 
     agreements[documentName].pending += 1;
-  }
+    agreements[documentName].pendingMembers.push({
+  firstName: row["First Name"] || "",
+  lastName: row["Last Name"] || "",
+  teams: row["Teams"] || "",
+});
+  } 
 }
   const agreementSummary = Object.values(agreements)
     .map((agreement) => {

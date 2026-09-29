@@ -77,6 +77,7 @@ const [collectionSummary, setCollectionSummary] = useState(null);
 const [complaintsSummary, setComplaintsSummary] = useState(null);
 const [volunteerSummary, setVolunteerSummary] = useState(null);
 const [familySummary, setFamilySummary] = useState(null);
+const [selectedAgreement, setSelectedAgreement] = useState(null);
 const [auth, setAuth] = useState({
   loading: true,
   authenticated: false,
@@ -1323,6 +1324,9 @@ if (!auth.authenticated) {
           Current acceptance status of club membership terms and
           codes of conduct recorded in TeamFeePay.
         </p>
+           <p>
+         Click on the PENDING entries to see the member details.
+        </p>
       </div>
 
       {!agreementsSummary ? (
@@ -1355,7 +1359,19 @@ if (!auth.authenticated) {
   <td>{agreement.documentName}</td>
   <td>{agreement.version || "—"}</td>
   <td>{agreement.signed}</td>
-  <td>{agreement.pending}</td>
+ <td>
+  {agreement.pending > 0 ? (
+    <button
+      type="button"
+      className="agreement-pending-link"
+      onClick={() => setSelectedAgreement(agreement)}
+    >
+      {agreement.pending}
+    </button>
+  ) : (
+    "0"
+  )}
+</td>
                 <td>
   <div className="agreement-progress">
     <div className="agreement-progress-bar">
@@ -1379,6 +1395,56 @@ if (!auth.authenticated) {
         </div>
       )}
     </section>
+
+{selectedAgreement && (
+  <div
+    className="agreement-modal-backdrop"
+    onClick={() => setSelectedAgreement(null)}
+  >
+    <div
+      className="agreement-modal"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="agreement-modal-header">
+        <div>
+          <h3>Pending Members</h3>
+          <p>{selectedAgreement.documentName}</p>
+        </div>
+
+        <button
+          type="button"
+          className="agreement-modal-close"
+          onClick={() => setSelectedAgreement(null)}
+          aria-label="Close"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="agreement-modal-summary">
+        {selectedAgreement.pending} member
+        {selectedAgreement.pending !== 1 ? "s" : ""} pending
+      </div>
+
+      <div className="agreement-member-list">
+        {selectedAgreement.pendingMembers?.map((member, index) => (
+          <div
+            className="agreement-member-row"
+            key={`${member.firstName}-${member.lastName}-${index}`}
+          >
+            <span className="agreement-member-name">
+              {member.firstName} {member.lastName}
+            </span>
+
+            <span className="agreement-member-team">
+              {member.teams || "—"}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
 
     <section className="panel">
       <div className="panel-header">
