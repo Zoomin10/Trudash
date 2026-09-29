@@ -1393,6 +1393,56 @@ if (!auth.authenticated) {
       )}
     </section>
 
+{selectedAgreement && (
+  <div
+    className="agreement-modal-backdrop"
+    onClick={() => setSelectedAgreement(null)}
+  >
+    <div
+      className="agreement-modal"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="agreement-modal-header">
+        <div>
+          <h3>Pending Members</h3>
+          <p>{selectedAgreement.documentName}</p>
+        </div>
+
+        <button
+          type="button"
+          className="agreement-modal-close"
+          onClick={() => setSelectedAgreement(null)}
+          aria-label="Close"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="agreement-modal-summary">
+        {selectedAgreement.pending} member
+        {selectedAgreement.pending !== 1 ? "s" : ""} pending
+      </div>
+
+      <div className="agreement-member-list">
+        {selectedAgreement.pendingMembers?.map((member, index) => (
+          <div
+            className="agreement-member-row"
+            key={`${member.firstName}-${member.lastName}-${index}`}
+          >
+            <span className="agreement-member-name">
+              {member.firstName} {member.lastName}
+            </span>
+
+            <span className="agreement-member-team">
+              {member.teams || "—"}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
+
     <section className="panel">
       <div className="panel-header">
         <h2>Agreement Overview</h2>
