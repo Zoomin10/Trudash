@@ -1041,16 +1041,19 @@ async function getAgreementDocumentVersions() {
     ...policyDocuments,
     ...governanceDocuments,
   ];
-console.log(
-  "Agreement source documents:",
-  documents.map((document) => document.name)
-);
+
   const metadata = await Promise.all(
     documents.map((document) =>
       getDocumentMetadata(document)
     )
   );
-
+console.log(
+  "Agreement metadata:",
+  metadata.map((document) => ({
+    name: document.name,
+    controlledVersion: document.controlledVersion,
+  }))
+);
   const agreementMappings = {
     "WWFC Member Terms & Conditions":
       "WWFC Player Membership Terms and Conditions",
