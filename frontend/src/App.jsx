@@ -1340,7 +1340,16 @@ if (!auth.authenticated) {
             </thead>
 
             <tbody>
-              {agreementsSummary.agreements.map((agreement) => (
+            {[...agreementsSummary.agreements]
+  .sort((a, b) => {
+    const priorityDocument = "WWFC Member Terms & Conditions";
+
+    if (a.documentName === priorityDocument) return -1;
+    if (b.documentName === priorityDocument) return 1;
+
+    return 0;
+  })
+  .map((agreement) => (
                 <tr key={agreement.documentName}>
                   <td>{agreement.documentName}</td>
                   <td>{agreement.signed}</td>
