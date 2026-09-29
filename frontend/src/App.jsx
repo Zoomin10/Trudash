@@ -1000,7 +1000,7 @@ if (!auth.authenticated) {
     {membersSummary?.membershipStatus?.Paused ?? 0}
   </div>
 
-  <div className="module-detail">
+  <div className="module-description">
     Memberships currently paused
   </div>
 </div>
@@ -1330,21 +1330,32 @@ if (!auth.authenticated) {
       ) : (
         <div className="policy-table-wrapper">
           <table className="policy-table">
-            <thead>
-              <tr>
-                <th>Agreement</th>
-                <th>Signed</th>
-                <th>Pending</th>
-                <th>Completion</th>
-              </tr>
-            </thead>
+          <thead>
+  <tr>
+    <th>Agreement</th>
+    <th>Version</th>
+    <th>Signed</th>
+    <th>Pending</th>
+    <th>Completion</th>
+  </tr>
+</thead>
 
             <tbody>
-              {agreementsSummary.agreements.map((agreement) => (
-                <tr key={agreement.documentName}>
-                  <td>{agreement.documentName}</td>
-                  <td>{agreement.signed}</td>
-                  <td>{agreement.pending}</td>
+            {[...agreementsSummary.agreements]
+  .sort((a, b) => {
+    const priorityDocument = "WWFC Member Terms & Conditions";
+
+    if (a.documentName === priorityDocument) return -1;
+    if (b.documentName === priorityDocument) return 1;
+
+    return 0;
+  })
+  .map((agreement) => (
+               <tr key={agreement.documentName}>
+  <td>{agreement.documentName}</td>
+  <td>{agreement.version || "—"}</td>
+  <td>{agreement.signed}</td>
+  <td>{agreement.pending}</td>
                 <td>
   <div className="agreement-progress">
     <div className="agreement-progress-bar">
