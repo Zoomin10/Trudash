@@ -876,7 +876,13 @@ if (recurringCollectionSheet) {
       blankrows: false,
     }
   );
-
+console.log(
+  "Amount Collected sample:",
+  recurringRows.slice(0, 5).map((row) => ({
+    value: row["Amount Collected"],
+    type: typeof row["Amount Collected"],
+  }))
+);
   payableCollections = recurringRows.filter((row) => {
     const amountDueToClub =
       Number(row["Amount Due to Club"]) || 0;
@@ -985,7 +991,7 @@ const overdue =
 
       totalClubCollected:
   Math.round(totalClubCollected * 100) / 100,
-  
+
     months,
   };
 }
