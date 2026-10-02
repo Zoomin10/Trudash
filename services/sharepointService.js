@@ -825,6 +825,7 @@ async function getTeamFeePayCollectionSummary() {
   let totalOverdue = 0;
   let totalPayableCollections = 0;
   let pausedMemberships = 0;
+  let totalClubCollected = 0;
 
   const months = [];
 
@@ -865,6 +866,7 @@ const recurringCollectionSheet =
       return 0;
     };
 let payableCollections = 0;
+let clubCollected = 0;
 
 if (recurringCollectionSheet) {
   const recurringRows = XLSX.utils.sheet_to_json(
@@ -880,6 +882,12 @@ if (recurringCollectionSheet) {
       Number(row["Amount Due to Club"]) || 0;
 
     return amountDueToClub > 0;
+  clubCollected = recurringRows.reduce((total, row) => {
+  const amountCollected =
+    Number(row["Amount Collected"]) || 0;
+
+  return total + amountCollected;
+}, 0);
   }).length;
 
   // Use the latest monthly report for the current
@@ -920,6 +928,7 @@ const overdue =
     totalDueToClub += dueToClub;
     totalOverdue += overdue;
     totalPayableCollections += payableCollections;
+    totalClubCollected += clubCollected;
 
     const monthMatch = report.name.match(
       /Monthly_By_Team_Report_for_(\d{4})-(\d{2})/
@@ -974,6 +983,9 @@ const overdue =
     totalOverdue:
       Math.round(totalOverdue * 100) / 100,
 
+      totalClubCollected:
+  Math.round(totalClubCollected * 100) / 100,
+  
     months,
   };
 }
