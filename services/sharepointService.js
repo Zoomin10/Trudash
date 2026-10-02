@@ -960,7 +960,7 @@ const overdue =
   clubCollected:
     Math.round(clubCollected * 100) / 100,
 });
-
+  }
 
  const collectionRate =
   totalDueToClub + totalOverdue > 0
