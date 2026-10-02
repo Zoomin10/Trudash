@@ -901,22 +901,26 @@ const overdue =
       collections,
       successful,
       failed,
-      collectionRate:
-        collections > 0
-          ? Math.round((successful / collections) * 1000) / 10
-          : 0,
+    collectionRate:
+  dueToClub + overdue > 0
+    ? Math.round(
+        (dueToClub / (dueToClub + overdue)) * 1000
+      ) / 10
+    : 0,
       paidByUsers,
       dueToClub,
       overdue,
     });
   }
 
-  const collectionRate =
-    totalCollections > 0
-      ? Math.round(
-          (successfulCollections / totalCollections) * 1000
-        ) / 10
-      : 0;
+ const collectionRate =
+  totalDueToClub + totalOverdue > 0
+    ? Math.round(
+        (totalDueToClub /
+          (totalDueToClub + totalOverdue)) *
+          1000
+      ) / 10
+    : 0;
 
   return {
     collectionRate,
