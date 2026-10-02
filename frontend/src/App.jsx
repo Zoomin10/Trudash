@@ -1216,7 +1216,9 @@ if (!auth.authenticated) {
         </thead>
 
         <tbody>
-          {collectionSummary.months.map((month) => (
+      {[...collectionSummary.months]
+  .sort((a, b) => b.month.localeCompare(a.month))
+  .map((month) => (
             <tr key={month.month}>
               <td>
                 {new Date(`${month.month}-01`).toLocaleDateString(
