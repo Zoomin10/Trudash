@@ -823,6 +823,7 @@ async function getTeamFeePayCollectionSummary() {
   let totalPaidByUsers = 0;
   let totalDueToClub = 0;
   let totalOverdue = 0;
+  let totalPayableCollections = 0;
 
   const months = [];
 
@@ -862,21 +863,23 @@ const recurringCollectionSheet =
 
       return 0;
     };
+let payableCollections = 0;
+
 if (recurringCollectionSheet) {
   const recurringRows = XLSX.utils.sheet_to_json(
     recurringCollectionSheet,
     {
-      header: 1,
       defval: null,
       blankrows: false,
     }
   );
 
-  console.log(
-    "Recurring Collection headers:",
-    report.name,
-    recurringRows[0]
-  );
+  payableCollections = recurringRows.filter((row) => {
+    const amountDueToClub =
+      Number(row["Amount Due to Club"]) || 0;
+
+    return amountDueToClub > 0;
+  }).length;
 }
    const collections =
   findValue("Total Number of Collections");
@@ -903,6 +906,7 @@ const overdue =
     totalPaidByUsers += paidByUsers;
     totalDueToClub += dueToClub;
     totalOverdue += overdue;
+    totalPayableCollections += payableCollections;
 
     const monthMatch = report.name.match(
       /Monthly_By_Team_Report_for_(\d{4})-(\d{2})/
@@ -916,6 +920,7 @@ const overdue =
     months.push({
       month,
       collections,
+      payableCollections,
       successful,
       failed,
     collectionRate:
@@ -942,6 +947,7 @@ const overdue =
   return {
     collectionRate,
     totalCollections,
+     totalPayableCollections,
     successfulCollections,
     failedCollections,
 
