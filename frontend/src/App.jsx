@@ -1176,20 +1176,17 @@ if (!auth.authenticated) {
   <div className="module-value">
     {membersSummary?.discounts?.discountedMembers ?? 0}
   </div>
-
   <div className="module-description">
     Discounted Memberships
   </div>
 
   <div className="module-value">
-    1
+    {collectionSummary.pausedMemberships ?? 0}
   </div>
-
   <div className="module-description">
     Paused Memberships
   </div>
 </div>
-
    
   </section>
 )}
