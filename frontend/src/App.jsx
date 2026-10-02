@@ -1199,6 +1199,86 @@ if (!auth.authenticated) {
   <div className="module-description">
     Paused Memberships
   </div>
+
+  {showOverdueModal && (
+  <div
+    className="modal-overlay"
+    onClick={() => setShowOverdueModal(false)}
+  >
+    <div
+      className="modal-content"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="modal-header">
+        <div>
+          <h2>Overdue Collections</h2>
+          <p>
+            Current TeamFeePay overdue membership collections
+          </p>
+        </div>
+
+        <button
+          className="modal-close"
+          onClick={() => setShowOverdueModal(false)}
+          aria-label="Close"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="modal-summary">
+        <strong>
+          {collectionSummary.overdueMembers?.length || 0}
+        </strong>{" "}
+        overdue members ·{" "}
+        <strong>
+          £{collectionSummary.totalOverdue.toFixed(2)}
+        </strong>{" "}
+        due to club
+      </div>
+
+      <div className="modal-table-wrapper">
+        <table className="modal-table">
+          <thead>
+            <tr>
+              <th>Member</th>
+              <th>Team</th>
+              <th>Member Due</th>
+              <th>Club Overdue</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {collectionSummary.overdueMembers?.map(
+              (member, index) => (
+                <tr
+                  key={`${member.firstName}-${member.lastName}-${index}`}
+                >
+                  <td>
+                    {member.firstName} {member.lastName}
+                  </td>
+
+                  <td>{member.teams}</td>
+
+                  <td>
+                    £{member.amountDue.toFixed(2)}
+                  </td>
+
+                  <td>
+                    £{member.clubOverdue.toFixed(2)}
+                  </td>
+
+                  <td>{member.status}</td>
+                </tr>
+              )
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+)}
 </div>
    
   </section>
