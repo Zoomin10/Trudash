@@ -876,28 +876,25 @@ if (recurringCollectionSheet) {
       blankrows: false,
     }
   );
-console.log(
-  "Amount Collected sample:",
-  recurringRows.slice(0, 5).map((row) => ({
-    value: row["Amount Collected"],
-    type: typeof row["Amount Collected"],
-  }))
-);
+
+  // Count collections where money is actually due to the club
   payableCollections = recurringRows.filter((row) => {
     const amountDueToClub =
       Number(row["Amount Due to Club"]) || 0;
 
     return amountDueToClub > 0;
-  clubCollected = recurringRows.reduce((total, row) => {
-  const amountCollected =
-    Number(row["Amount Collected"]) || 0;
-
-  return total + amountCollected;
-}, 0);
   }).length;
 
+  // Sum the net amount actually collected for the club
+  clubCollected = recurringRows.reduce((total, row) => {
+    const amountCollected =
+      Number(row["Amount Collected"]) || 0;
+
+    return total + amountCollected;
+  }, 0);
+
   // Use the latest monthly report for the current
-  // number of paused memberships.
+  // number of paused memberships
   if (report === monthlyReports[monthlyReports.length - 1]) {
     pausedMemberships = recurringRows.filter((row) => {
       const status = String(row["Status"] || "")
@@ -960,6 +957,7 @@ const overdue =
       paidByUsers,
       dueToClub,
       overdue,
+        clubCollected:
     });
   }
 
