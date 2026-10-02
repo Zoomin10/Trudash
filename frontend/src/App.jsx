@@ -1284,7 +1284,7 @@ if (!auth.authenticated) {
     </div>
   </div>
 )}
-</div>
+
    
   </section>
 )}
