@@ -1132,17 +1132,17 @@ if (!auth.authenticated) {
   </div>
 
   <div className="module-value">
-    £{collectionSummary.totalDueToClub.toLocaleString(
-      "en-GB",
-      {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }
-    )}
+    £{(
+      collectionSummary.totalDueToClub -
+      collectionSummary.totalOverdue
+    ).toLocaleString("en-GB", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}
   </div>
 
   <div className="module-description">
-    Net amount received by WWFC — FYTD
+    Net subscription income received — FYTD
   </div>
 </div>
 
@@ -1167,20 +1167,28 @@ if (!auth.authenticated) {
   </div>
 </div>
 
-    {/* Discounted Memberships */}
-      <div className="module-card">
-        <div className="module-title">
-          Discounted Memberships
-        </div>
+{/* Membership Adjustments */}
+<div className="module-card">
+  <div className="module-title">
+    Membership Adjustments
+  </div>
 
-        <div className="module-value">
-          {membersSummary?.discounts?.discountedMembers ?? 0}
-        </div>
+  <div className="module-value">
+    {membersSummary?.discounts?.discountedMembers ?? 0}
+  </div>
 
-        <div className="module-description">
-          Memberships with a discount applied
-        </div>
-      </div>
+  <div className="module-description">
+    Discounted Memberships
+  </div>
+
+  <div className="module-value">
+    1
+  </div>
+
+  <div className="module-description">
+    Paused Memberships
+  </div>
+</div>
 
    
   </section>
