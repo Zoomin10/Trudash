@@ -78,6 +78,7 @@ const [complaintsSummary, setComplaintsSummary] = useState(null);
 const [volunteerSummary, setVolunteerSummary] = useState(null);
 const [familySummary, setFamilySummary] = useState(null);
 const [selectedAgreement, setSelectedAgreement] = useState(null);
+const [showOverdueModal, setShowOverdueModal] = useState(false);
 const [auth, setAuth] = useState({
   loading: true,
   authenticated: false,
@@ -1110,18 +1111,30 @@ if (!auth.authenticated) {
 </div>
     </div>
 
-   {/* Club Overdue */} 
- <div className="module-card">
+  {/* Club Overdue */}
+<div
+  className="module-card clickable-card"
+  onClick={() => setShowOverdueModal(true)}
+  role="button"
+  tabIndex={0}
+  onKeyDown={(e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      setShowOverdueModal(true);
+    }
+  }}
+>
   <div className="module-value">
-        £{collectionSummary.totalOverdue.toFixed(2)}
-      </div>
-      <div className="module-title">
-        Club Overdue
-      </div>
-      <div className="module-detail">
-        Current FY position
-      </div>
-    </div>
+    £{collectionSummary.totalOverdue.toFixed(2)}
+  </div>
+
+  <div className="module-title">
+    Club Overdue
+  </div>
+
+  <div className="module-detail">
+    View {collectionSummary.overdueMembers?.length || 0} overdue members
+  </div>
+</div>
 
 
 
