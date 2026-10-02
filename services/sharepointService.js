@@ -830,7 +830,11 @@ async function getTeamFeePayCollectionSummary() {
     const workbook = await getTeamFeePayWorkbook(report.id);
 
     const summarySheet = workbook.Sheets["Summary"];
-
+console.log(
+  "TeamFeePay workbook sheets:",
+  report.name,
+  workbook.SheetNames
+);
     if (!summarySheet) {
       continue;
     }
@@ -879,6 +883,10 @@ const dueToClub =
 
 const overdue =
   findValue("Total Overdue for Club");
+  const payableCollections =
+  collections > 0
+    ? collections - 1
+    : 0;
 
     totalCollections += collections;
     successfulCollections += successful;
