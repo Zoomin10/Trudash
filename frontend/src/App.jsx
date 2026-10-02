@@ -1211,7 +1211,7 @@ if (!auth.authenticated) {
             <th>Failed</th>
           <th>Rate</th>
           <th>Net Collected</th>
-            <th>Club Overdue</th>
+            <th>Overdue</th>
           </tr>
         </thead>
 
