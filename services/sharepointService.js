@@ -961,6 +961,7 @@ const overdue =
     });
   }
 
+  
  const collectionRate =
   totalDueToClub + totalOverdue > 0
     ? Math.round(
