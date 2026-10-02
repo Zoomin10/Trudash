@@ -1125,46 +1125,46 @@ if (!auth.authenticated) {
 
 
 
-    {/* Club Received */}
-      <div className="module-card">
-        <div className="module-title">
-          Club Received
-        </div>
+ {/* Club Received */}
+<div className="module-card">
+  <div className="module-title">
+    Club Received
+  </div>
 
-        <div className="module-value">
-          {membersSummary?.payments
-            ? `£${membersSummary.payments.totalClubReceived.toLocaleString(
-                "en-GB",
-                {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                }
-              )}`
-            : "—"}
-        </div>
+  <div className="module-value">
+    £{collectionSummary.totalDueToClub.toLocaleString(
+      "en-GB",
+      {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }
+    )}
+  </div>
 
-        <div className="module-description">
-          Net amount received by WWFC
-        </div>
-      </div>
+  <div className="module-description">
+    Net amount received by WWFC — FYTD
+  </div>
+</div>
+{/* Paid by Members */}
+<div className="module-card">
+  <div className="module-title">
+    Paid by Members
+  </div>
 
-  {/* Paid by Members */}
-      <div className="module-card">
-        <div className="module-title">
-          Paid by Members
-        </div>
+  <div className="module-value">
+    £{collectionSummary.totalPaidByUsers.toLocaleString(
+      "en-GB",
+      {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }
+    )}
+  </div>
 
-        <div className="module-value">
-          {membersSummary?.payments
-            ? `£${membersSummary.payments.totalPaidByUsers.toLocaleString(
-                "en-GB",
-                {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                }
-              )}`
-            : "—"}
-        </div>
+  <div className="module-description">
+    Gross payments collected — FYTD
+  </div>
+</div>
 
         <div className="module-description">
           Gross payments collected
