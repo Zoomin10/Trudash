@@ -1145,7 +1145,8 @@ if (!auth.authenticated) {
     Net amount received by WWFC — FYTD
   </div>
 </div>
-{/* Paid by Members */}
+
+ {/* Paid by Members */}
 <div className="module-card">
   <div className="module-title">
     Paid by Members
@@ -1165,11 +1166,6 @@ if (!auth.authenticated) {
     Gross payments collected — FYTD
   </div>
 </div>
-
-        <div className="module-description">
-          Gross payments collected
-        </div>
-      </div>
 
     {/* Discounted Memberships */}
       <div className="module-card">
