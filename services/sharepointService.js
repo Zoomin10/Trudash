@@ -954,14 +954,14 @@ const overdue =
         (dueToClub / (dueToClub + overdue)) * 1000
       ) / 10
     : 0,
-      paidByUsers,
-      dueToClub,
-      overdue,
-        clubCollected:
-    });
-  }
+     paidByUsers,
+  dueToClub,
+  overdue,
+  clubCollected:
+    Math.round(clubCollected * 100) / 100,
+});
 
-  
+
  const collectionRate =
   totalDueToClub + totalOverdue > 0
     ? Math.round(
