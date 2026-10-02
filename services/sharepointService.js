@@ -826,6 +826,7 @@ async function getTeamFeePayCollectionSummary() {
   let totalPayableCollections = 0;
   let pausedMemberships = 0;
   let totalClubCollected = 0;
+  let overdueMembers = [];
 
   const months = [];
 
@@ -893,17 +894,36 @@ if (recurringCollectionSheet) {
     return total + amountCollected;
   }, 0);
 
-  // Use the latest monthly report for the current
-  // number of paused memberships
-  if (report === monthlyReports[monthlyReports.length - 1]) {
-    pausedMemberships = recurringRows.filter((row) => {
+// Use the latest monthly report for current
+// membership and overdue information
+if (report === monthlyReports[monthlyReports.length - 1]) {
+  pausedMemberships = recurringRows.filter((row) => {
+    const status = String(row["Status"] || "")
+      .trim()
+      .toLowerCase();
+
+    return status === "paused";
+  }).length;
+
+  overdueMembers = recurringRows
+    .filter((row) => {
       const status = String(row["Status"] || "")
         .trim()
         .toLowerCase();
 
-      return status === "paused";
-    }).length;
-  }
+      return status === "overdue";
+    })
+    .map((row) => ({
+      firstName: row["First Name"] || "",
+      lastName: row["Last Name"] || "",
+      teams: row["Teams"] || "",
+      amountDue:
+        Number(row["Amount Due from User"]) || 0,
+      clubOverdue:
+        Number(row["Amount Due to Club"]) || 0,
+      status: row["Status"] || "",
+    }));
+}
 }
    const collections =
   findValue("Total Number of Collections");
@@ -978,6 +998,7 @@ const overdue =
     successfulCollections,
     failedCollections,
       pausedMemberships,
+      overdueMembers,
 
     totalPaidByUsers:
       Math.round(totalPaidByUsers * 100) / 100,
