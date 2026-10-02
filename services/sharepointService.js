@@ -830,11 +830,8 @@ async function getTeamFeePayCollectionSummary() {
     const workbook = await getTeamFeePayWorkbook(report.id);
 
     const summarySheet = workbook.Sheets["Summary"];
-console.log(
-  "TeamFeePay workbook sheets:",
-  report.name,
-  workbook.SheetNames
-);
+const recurringCollectionSheet =
+  workbook.Sheets["Recurring Collection"];
     if (!summarySheet) {
       continue;
     }
@@ -865,7 +862,22 @@ console.log(
 
       return 0;
     };
+if (recurringCollectionSheet) {
+  const recurringRows = XLSX.utils.sheet_to_json(
+    recurringCollectionSheet,
+    {
+      header: 1,
+      defval: null,
+      blankrows: false,
+    }
+  );
 
+  console.log(
+    "Recurring Collection headers:",
+    report.name,
+    recurringRows[0]
+  );
+}
    const collections =
   findValue("Total Number of Collections");
 
@@ -883,10 +895,7 @@ const dueToClub =
 
 const overdue =
   findValue("Total Overdue for Club");
-  const payableCollections =
-  collections > 0
-    ? collections - 1
-    : 0;
+  
 
     totalCollections += collections;
     successfulCollections += successful;
