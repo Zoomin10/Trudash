@@ -1084,18 +1084,18 @@ if (!auth.authenticated) {
   <section className="module-grid">
 
 
-    {/* Collection Success */}  
- <div className="module-card">
-      <div className="module-value">
-        {collectionSummary.collectionRate}%
-      </div>
-      <div className="module-title">
-        Collection Success
-      </div>
-     <div className="module-detail">
-        Financial year to date
-      </div>
-    </div>
+   {/* Collection Rate */}  
+<div className="module-card">
+  <div className="module-value">
+    {collectionSummary.collectionRate}%
+  </div>
+  <div className="module-title">
+    Collection Rate
+  </div>
+  <div className="module-detail">
+    Financial year to date
+  </div>
+</div>
 
     {/* Successful Collections */}
    <div className="module-card">
@@ -1105,9 +1105,9 @@ if (!auth.authenticated) {
     <div className="module-title">
         Successful Collections
       </div>
-     <div className="module-detail">
-        of {collectionSummary.totalCollections} due
-      </div>
+   <div className="module-detail">
+  of {collectionSummary.totalPayableCollections} payable collections
+</div>
     </div>
 
    {/* Club Overdue */} 
@@ -1125,67 +1125,68 @@ if (!auth.authenticated) {
 
 
 
-    {/* Club Received */}
-      <div className="module-card">
-        <div className="module-title">
-          Club Received
-        </div>
+ {/* Club Received */}
+<div className="module-card">
+  <div className="module-title">
+    Club Received
+  </div>
 
-        <div className="module-value">
-          {membersSummary?.payments
-            ? `£${membersSummary.payments.totalClubReceived.toLocaleString(
-                "en-GB",
-                {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                }
-              )}`
-            : "—"}
-        </div>
+  <div className="module-value">
+  £{collectionSummary.totalClubCollected.toLocaleString(
+  "en-GB",
+  {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }
+)}
+  </div>
 
-        <div className="module-description">
-          Net amount received by WWFC
-        </div>
-      </div>
+  <div className="module-description">
+    Net subscription income collected — FYTD
+  </div>
+</div>
 
-  {/* Paid by Members */}
-      <div className="module-card">
-        <div className="module-title">
-          Paid by Members
-        </div>
+ {/* Paid by Members */}
+<div className="module-card">
+  <div className="module-title">
+    Paid by Members
+  </div>
 
-        <div className="module-value">
-          {membersSummary?.payments
-            ? `£${membersSummary.payments.totalPaidByUsers.toLocaleString(
-                "en-GB",
-                {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                }
-              )}`
-            : "—"}
-        </div>
+  <div className="module-value">
+    £{collectionSummary.totalPaidByUsers.toLocaleString(
+      "en-GB",
+      {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }
+    )}
+  </div>
 
-        <div className="module-description">
-          Gross payments collected
-        </div>
-      </div>
+  <div className="module-description">
+    Gross payments collected — FYTD
+  </div>
+</div>
 
-    {/* Discounted Memberships */}
-      <div className="module-card">
-        <div className="module-title">
-          Discounted Memberships
-        </div>
+{/* Membership Adjustments */}
+<div className="module-card">
+  <div className="module-title">
+    Membership Adjustments
+  </div>
 
-        <div className="module-value">
-          {membersSummary?.discounts?.discountedMembers ?? 0}
-        </div>
+  <div className="module-value">
+    {membersSummary?.discounts?.discountedMembers ?? 0}
+  </div>
+  <div className="module-description">
+    Discounted Memberships
+  </div>
 
-        <div className="module-description">
-          Memberships with a discount applied
-        </div>
-      </div>
-
+  <div className="module-value">
+    {collectionSummary.pausedMemberships ?? 0}
+  </div>
+  <div className="module-description">
+    Paused Memberships
+  </div>
+</div>
    
   </section>
 )}
@@ -1208,13 +1209,16 @@ if (!auth.authenticated) {
             <th>Collections</th>
             <th>Successful</th>
             <th>Failed</th>
-            <th>Success Rate</th>
-            <th>Club Overdue</th>
+          <th>Rate</th>
+          <th>Net Collected</th>
+            <th>Overdue</th>
           </tr>
         </thead>
 
         <tbody>
-          {collectionSummary.months.map((month) => (
+      {[...collectionSummary.months]
+  .sort((a, b) => b.month.localeCompare(a.month))
+  .map((month) => (
             <tr key={month.month}>
               <td>
                 {new Date(`${month.month}-01`).toLocaleDateString(
@@ -1230,6 +1234,7 @@ if (!auth.authenticated) {
               <td>{month.successful}</td>
               <td>{month.failed}</td>
               <td>{month.collectionRate}%</td>
+              <td>£{month.clubCollected.toFixed(2)}</td>
               <td>£{month.overdue.toFixed(2)}</td>
             </tr>
           ))}
