@@ -1084,18 +1084,18 @@ if (!auth.authenticated) {
   <section className="module-grid">
 
 
-    {/* Collection Success */}  
- <div className="module-card">
-      <div className="module-value">
-        {collectionSummary.collectionRate}%
-      </div>
-      <div className="module-title">
-        Collection Success
-      </div>
-     <div className="module-detail">
-        Financial year to date
-      </div>
-    </div>
+   {/* Collection Rate */}  
+<div className="module-card">
+  <div className="module-value">
+    {collectionSummary.collectionRate}%
+  </div>
+  <div className="module-title">
+    Collection Rate
+  </div>
+  <div className="module-detail">
+    Financial year to date
+  </div>
+</div>
 
     {/* Successful Collections */}
    <div className="module-card">
@@ -1105,9 +1105,9 @@ if (!auth.authenticated) {
     <div className="module-title">
         Successful Collections
       </div>
-     <div className="module-detail">
-        of {collectionSummary.totalCollections} due
-      </div>
+   <div className="module-detail">
+  of {collectionSummary.totalPayableCollections} payable collections
+</div>
     </div>
 
    {/* Club Overdue */} 
@@ -1208,7 +1208,7 @@ if (!auth.authenticated) {
             <th>Collections</th>
             <th>Successful</th>
             <th>Failed</th>
-            <th>Success Rate</th>
+          <th>Collection Rate</th>
             <th>Club Overdue</th>
           </tr>
         </thead>
