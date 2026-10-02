@@ -1132,17 +1132,17 @@ if (!auth.authenticated) {
   </div>
 
   <div className="module-value">
-    £{(
-      collectionSummary.totalDueToClub -
-      collectionSummary.totalOverdue
-    ).toLocaleString("en-GB", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}
+  £{collectionSummary.totalClubCollected.toLocaleString(
+  "en-GB",
+  {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }
+)}
   </div>
 
   <div className="module-description">
-    Net subscription income received — FYTD
+    Net subscription income collected — FYTD
   </div>
 </div>
 
