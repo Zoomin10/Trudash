@@ -1210,6 +1210,7 @@ if (!auth.authenticated) {
             <th>Successful</th>
             <th>Failed</th>
           <th>Collection Rate</th>
+          <th>Net Collected</th>
             <th>Club Overdue</th>
           </tr>
         </thead>
@@ -1231,6 +1232,7 @@ if (!auth.authenticated) {
               <td>{month.successful}</td>
               <td>{month.failed}</td>
               <td>{month.collectionRate}%</td>
+              <td>£{month.clubCollected.toFixed(2)}</td>
               <td>£{month.overdue.toFixed(2)}</td>
             </tr>
           ))}
