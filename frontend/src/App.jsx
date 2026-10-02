@@ -1189,6 +1189,7 @@ if (!auth.authenticated) {
   <div className="module-value">
     {membersSummary?.discounts?.discountedMembers ?? 0}
   </div>
+
   <div className="module-description">
     Discounted Memberships
   </div>
@@ -1196,9 +1197,13 @@ if (!auth.authenticated) {
   <div className="module-value">
     {collectionSummary.pausedMemberships ?? 0}
   </div>
+
   <div className="module-description">
     Paused Memberships
   </div>
+</div>
+
+{/* Overdue Collections Modal */}
 
   {showOverdueModal && (
   <div
