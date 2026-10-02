@@ -1209,7 +1209,7 @@ if (!auth.authenticated) {
             <th>Collections</th>
             <th>Successful</th>
             <th>Failed</th>
-          <th>Collection Rate</th>
+          <th>Rate</th>
           <th>Net Collected</th>
             <th>Club Overdue</th>
           </tr>
