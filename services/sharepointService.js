@@ -824,6 +824,7 @@ async function getTeamFeePayCollectionSummary() {
   let totalDueToClub = 0;
   let totalOverdue = 0;
   let totalPayableCollections = 0;
+  let pausedMemberships = 0;
 
   const months = [];
 
@@ -880,6 +881,18 @@ if (recurringCollectionSheet) {
 
     return amountDueToClub > 0;
   }).length;
+
+  // Use the latest monthly report for the current
+  // number of paused memberships.
+  if (report === monthlyReports[monthlyReports.length - 1]) {
+    pausedMemberships = recurringRows.filter((row) => {
+      const status = String(row["Status"] || "")
+        .trim()
+        .toLowerCase();
+
+      return status === "paused";
+    }).length;
+  }
 }
    const collections =
   findValue("Total Number of Collections");
@@ -950,6 +963,7 @@ const overdue =
      totalPayableCollections,
     successfulCollections,
     failedCollections,
+      pausedMemberships,
 
     totalPaidByUsers:
       Math.round(totalPaidByUsers * 100) / 100,
