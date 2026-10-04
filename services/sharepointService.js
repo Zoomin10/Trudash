@@ -897,7 +897,7 @@ if (recurringCollectionSheet) {
     return total + amountCollected;
   }, 0);
 
-  const pausedDueToClub = recurringRows
+pausedDueToClub = recurringRows
   .filter((row) => {
     const status = String(row["Status"] || "")
       .trim()
