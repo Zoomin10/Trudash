@@ -826,7 +826,9 @@ async function getTeamFeePayCollectionSummary() {
   let totalPayableCollections = 0;
   let pausedMemberships = 0;
   let totalClubCollected = 0;
+  let totalPausedDueToClub = 0;
   let overdueMembers = [];
+  
 
   const months = [];
 
@@ -868,6 +870,7 @@ const recurringCollectionSheet =
     };
 let payableCollections = 0;
 let clubCollected = 0;
+let pausedDueToClub = 0;
 
 if (recurringCollectionSheet) {
   const recurringRows = XLSX.utils.sheet_to_json(
@@ -894,16 +897,38 @@ if (recurringCollectionSheet) {
     return total + amountCollected;
   }, 0);
 
-// Use the latest monthly report for current
-// membership and overdue information
-if (report === monthlyReports[monthlyReports.length - 1]) {
-  pausedMemberships = recurringRows.filter((row) => {
+  const pausedDueToClub = recurringRows
+  .filter((row) => {
     const status = String(row["Status"] || "")
       .trim()
       .toLowerCase();
 
     return status === "paused";
-  }).length;
+  })
+  .reduce(
+    (total, row) =>
+      total + (Number(row["Amount Due to Club"]) || 0),
+    0
+  );
+
+// Use the latest monthly report for current
+// membership and overdue information
+if (report === monthlyReports[monthlyReports.length - 1]) {
+const pausedRows = recurringRows.filter((row) => {
+  const status = String(row["Status"] || "")
+    .trim()
+    .toLowerCase();
+
+  return status === "paused";
+});
+
+pausedMemberships = pausedRows.length;
+
+totalPausedDueToClub = pausedRows.reduce(
+  (total, row) =>
+    total + (Number(row["Amount Due to Club"]) || 0),
+  0
+);
 
   overdueMembers = recurringRows
     .filter((row) => {
@@ -968,10 +993,13 @@ const overdue =
       payableCollections,
       successful,
       failed,
-    collectionRate:
-  dueToClub + overdue > 0
+collectionRate:
+  dueToClub + overdue + pausedDueToClub > 0
     ? Math.round(
-        (dueToClub / (dueToClub + overdue)) * 1000
+        (
+          dueToClub /
+          (dueToClub + overdue + pausedDueToClub)
+        ) * 1000
       ) / 10
     : 0,
      paidByUsers,
