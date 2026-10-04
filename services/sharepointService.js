@@ -896,6 +896,20 @@ if (recurringCollectionSheet) {
     return total + amountCollected;
   }, 0);
 
+  const pausedDueToClub = recurringRows
+  .filter((row) => {
+    const status = String(row["Status"] || "")
+      .trim()
+      .toLowerCase();
+
+    return status === "paused";
+  })
+  .reduce(
+    (total, row) =>
+      total + (Number(row["Amount Due to Club"]) || 0),
+    0
+  );
+
 // Use the latest monthly report for current
 // membership and overdue information
 if (report === monthlyReports[monthlyReports.length - 1]) {
@@ -978,10 +992,13 @@ const overdue =
       payableCollections,
       successful,
       failed,
-    collectionRate:
-  dueToClub + overdue > 0
+collectionRate:
+  dueToClub + overdue + pausedDueToClub > 0
     ? Math.round(
-        (dueToClub / (dueToClub + overdue)) * 1000
+        (
+          dueToClub /
+          (dueToClub + overdue + pausedDueToClub)
+        ) * 1000
       ) / 10
     : 0,
      paidByUsers,
