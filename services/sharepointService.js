@@ -826,7 +826,9 @@ async function getTeamFeePayCollectionSummary() {
   let totalPayableCollections = 0;
   let pausedMemberships = 0;
   let totalClubCollected = 0;
+  let totalPausedDueToClub = 0;
   let overdueMembers = [];
+  
 
   const months = [];
 
@@ -897,13 +899,21 @@ if (recurringCollectionSheet) {
 // Use the latest monthly report for current
 // membership and overdue information
 if (report === monthlyReports[monthlyReports.length - 1]) {
-  pausedMemberships = recurringRows.filter((row) => {
-    const status = String(row["Status"] || "")
-      .trim()
-      .toLowerCase();
+const pausedRows = recurringRows.filter((row) => {
+  const status = String(row["Status"] || "")
+    .trim()
+    .toLowerCase();
 
-    return status === "paused";
-  }).length;
+  return status === "paused";
+});
+
+pausedMemberships = pausedRows.length;
+
+totalPausedDueToClub = pausedRows.reduce(
+  (total, row) =>
+    total + (Number(row["Amount Due to Club"]) || 0),
+  0
+);
 
   overdueMembers = recurringRows
     .filter((row) => {
