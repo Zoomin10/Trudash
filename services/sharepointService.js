@@ -910,7 +910,23 @@ if (recurringCollectionSheet) {
       total + (Number(row["Amount Due to Club"]) || 0),
     0
   );
-
+console.log("MONTHLY COLLECTION DEBUG", {
+  report: report.name,
+  pausedDueToClub,
+  pausedRows: recurringRows
+    .filter(
+      (row) =>
+        String(row["Status"] || "")
+          .trim()
+          .toLowerCase() === "paused"
+    )
+    .map((row) => ({
+      amountDueFromUser: row["Amount Due from User"],
+      amountDueToClub: row["Amount Due to Club"],
+      amountCollected: row["Amount Collected"],
+      status: row["Status"],
+    })),
+});
 // Use the latest monthly report for current
 // membership and overdue information
 if (report === monthlyReports[monthlyReports.length - 1]) {
