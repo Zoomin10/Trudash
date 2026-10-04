@@ -1106,8 +1106,9 @@ if (!auth.authenticated) {
     <div className="module-title">
         Successful Collections
       </div>
-   <div className="module-detail">
-  of {collectionSummary.totalPayableCollections} payable collections — FYTD
+<div className="module-detail">
+  {collectionSummary.failedCollections} overdue ·{" "}
+  {collectionSummary.pausedMemberships} paused — FYTD
 </div>
     </div>
 
