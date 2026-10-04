@@ -870,6 +870,7 @@ const recurringCollectionSheet =
     };
 let payableCollections = 0;
 let clubCollected = 0;
+let pausedDueToClub = 0;
 
 if (recurringCollectionSheet) {
   const recurringRows = XLSX.utils.sheet_to_json(
