@@ -993,6 +993,7 @@ const overdue =
     totalOverdue += overdue;
     totalPayableCollections += payableCollections;
     totalClubCollected += clubCollected;
+    totalPausedDueToClub += pausedDueToClub;
 
     const monthMatch = report.name.match(
       /Monthly_By_Team_Report_for_(\d{4})-(\d{2})/
@@ -1026,19 +1027,24 @@ collectionRate:
 });
   }
 
- const collectionRate =
-  totalDueToClub + totalOverdue > 0
+const collectionRate =
+  totalDueToClub + totalOverdue + totalPausedDueToClub > 0
     ? Math.round(
-        (totalDueToClub /
-          (totalDueToClub + totalOverdue)) *
-          1000
+        (
+          totalDueToClub /
+          (
+            totalDueToClub +
+            totalOverdue +
+            totalPausedDueToClub
+          )
+        ) * 1000
       ) / 10
     : 0;
 
   return {
     collectionRate,
     totalCollections,
-     totalPayableCollections,
+     totalPayableCollections, 
     successfulCollections,
     failedCollections,
       pausedMemberships,
