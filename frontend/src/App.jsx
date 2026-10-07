@@ -1141,8 +1141,8 @@ if (!auth.authenticated) {
     Club Overdue
   </div>
 
-  <div className="module-detail">
-    View {collectionSummary.overdueMembers?.length || 0} overdue members
+ <div className="module-description overdue-link">
+     View {collectionSummary.overdueMembers.length} overdue members →
   </div>
 </div>
 
@@ -1155,7 +1155,7 @@ if (!auth.authenticated) {
   </div>
 
   <div className="module-value">
-  £{collectionSummary.totalClubCollected.toLocaleString(
+£{(membersSummary?.payments?.totalClubReceived ?? 0).toLocaleString(
   "en-GB",
   {
     minimumFractionDigits: 2,
@@ -1176,7 +1176,7 @@ if (!auth.authenticated) {
   </div>
 
   <div className="module-value">
-    £{collectionSummary.totalPaidByUsers.toLocaleString(
+    £{(membersSummary?.payments?.totalPaidByUsers ?? 0).toLocaleString(
       "en-GB",
       {
         minimumFractionDigits: 2,
@@ -1215,7 +1215,7 @@ if (!auth.authenticated) {
   </div>
 
   <div className="module-detail">
-    Subscription collection costs — FYTD
+    Total collection costs — FYTD
   </div>
 </div>
 

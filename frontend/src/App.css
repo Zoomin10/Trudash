@@ -1430,3 +1430,13 @@ button.document-card:hover {
   text-align: right;
   white-space: nowrap;
 }
+.overdue-link {
+  color: #2563eb;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.overdue-link:hover {
+  text-decoration: underline;
+}
