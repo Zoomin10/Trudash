@@ -1190,7 +1190,34 @@ if (!auth.authenticated) {
   </div>
 </div>
 
+{/* Collection Fees */}
+<div className="module-card">
+  <div className="module-title">
+    Collection Fees
+  </div>
 
+  <div className="module-value">
+    £{(membersSummary?.payments?.totalCollectionFees ?? 0).toLocaleString(
+      "en-GB",
+      {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }
+    )}
+  </div>
+
+  <div className="module-description">
+    TFP £{(membersSummary?.payments?.totalTfpFees ?? 0).toFixed(2)}
+    {" · "}
+    Stripe £{(membersSummary?.payments?.totalStripeFees ?? 0).toFixed(2)}
+    {" · "}
+    VAT £{(membersSummary?.payments?.totalVat ?? 0).toFixed(2)}
+  </div>
+
+  <div className="module-detail">
+    Subscription collection costs — FYTD
+  </div>
+</div>
 
 {/* Overdue Collections Modal */}
 
