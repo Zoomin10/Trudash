@@ -993,7 +993,28 @@ if (!auth.authenticated) {
         </div>
       </div>
 
+{/* Membership Adjustments */}
+<div className="module-card">
+  <div className="module-title">
+    Membership Adjustments
+  </div>
 
+  <div className="module-value">
+    {membersSummary?.discounts?.discountedMembers ?? 0}
+  </div>
+
+  <div className="module-description">
+    Discounted Memberships
+  </div>
+
+  <div className="module-value">
+    {collectionSummary?.pausedMemberships ?? 0}
+  </div>
+
+  <div className="module-description">
+    Paused Memberships
+  </div>
+</div>
 
     </section>
 
@@ -1169,28 +1190,7 @@ if (!auth.authenticated) {
   </div>
 </div>
 
-{/* Membership Adjustments */}
-<div className="module-card">
-  <div className="module-title">
-    Membership Adjustments
-  </div>
 
-  <div className="module-value">
-    {membersSummary?.discounts?.discountedMembers ?? 0}
-  </div>
-
-  <div className="module-description">
-    Discounted Memberships
-  </div>
-
-  <div className="module-value">
-    {collectionSummary?.pausedMemberships ?? 0}
-  </div>
-
-  <div className="module-description">
-    Paused Memberships
-  </div>
-</div>
 
 {/* Overdue Collections Modal */}
 
