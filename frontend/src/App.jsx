@@ -993,19 +993,7 @@ if (!auth.authenticated) {
         </div>
       </div>
 
-<div className="module-card">
-  <div className="module-title">
-    Paused Memberships
-  </div>
 
-  <div className="module-value">
-    {membersSummary?.membershipStatus?.Paused ?? 0}
-  </div>
-
-  <div className="module-description">
-    Memberships currently paused
-  </div>
-</div>
 
     </section>
 
@@ -1196,7 +1184,7 @@ if (!auth.authenticated) {
   </div>
 
   <div className="module-value">
-    {collectionSummary.pausedMemberships ?? 0}
+    {collectionSummary?.pausedMemberships ?? 0}
   </div>
 
   <div className="module-description">

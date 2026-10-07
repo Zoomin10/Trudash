@@ -590,13 +590,25 @@ if (!seasonReport) {
     "Eligible to play in games"
   ),
 
-  totalPaidByUsers: getColumnIndex(
-    "Total Paid By User(s)"
-  ),
+totalPaidByUsers: getColumnIndex(
+  "Total Paid By User(s)"
+),
 
-  totalClubReceived: getColumnIndex(
-    "Total Club has Received"
-  ),
+totalTfpFees: getColumnIndex(
+  "Total TFP Fees"
+),
+
+totalStripeFees: getColumnIndex(
+  "Total Stripe Fees"
+),
+
+totalVat: getColumnIndex(
+  "Total VAT (paid by TFP)"
+),
+
+totalClubReceived: getColumnIndex(
+  "Total Club has Received"
+),
 
   totalClubOverdue: getColumnIndex(
     "Total Club Amount Overdue"
@@ -681,7 +693,22 @@ const discountedMembers = members.filter((row) => {
     )
   );
 });
+const totalTfpFees = sumColumn(
+  columns.totalTfpFees
+);
 
+const totalStripeFees = sumColumn(
+  columns.totalStripeFees
+);
+
+const totalVat = sumColumn(
+  columns.totalVat
+);
+
+const totalCollectionFees =
+  totalTfpFees +
+  totalStripeFees +
+  totalVat;
 
 const discounts = {
   discountedMembers: discountedMembers.length,
@@ -707,8 +734,15 @@ members.forEach((row) => {
       (teamCounts[team] || 0) + 1;
   });
 });
+
 const payments = {
   totalPaidByUsers: sumColumn(columns.totalPaidByUsers),
+
+  totalTfpFees,
+  totalStripeFees,
+  totalVat,
+  totalCollectionFees,
+
   totalClubReceived: sumColumn(columns.totalClubReceived),
   totalClubOverdue: sumColumn(columns.totalClubOverdue),
   totalClubDue: sumColumn(columns.totalClubDue),
@@ -753,6 +787,7 @@ const payments = {
   teams: teamCounts,
   };
 }
+
 async function getComplaintsSummary() {
 const folderPath = "Safeguarding & Complaints";
 
