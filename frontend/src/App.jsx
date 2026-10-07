@@ -1155,7 +1155,7 @@ if (!auth.authenticated) {
   </div>
 
   <div className="module-value">
-  £{collectionSummary.totalClubCollected.toLocaleString(
+£{(membersSummary?.payments?.totalClubReceived ?? 0).toLocaleString(
   "en-GB",
   {
     minimumFractionDigits: 2,
