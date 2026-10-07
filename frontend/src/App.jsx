@@ -993,17 +993,26 @@ if (!auth.authenticated) {
         </div>
       </div>
 
+{/* Membership Adjustments */}
 <div className="module-card">
   <div className="module-title">
-    Paused Memberships
+    Membership Adjustments
   </div>
 
   <div className="module-value">
-    {membersSummary?.membershipStatus?.Paused ?? 0}
+    {membersSummary?.discounts?.discountedMembers ?? 0}
   </div>
 
   <div className="module-description">
-    Memberships currently paused
+    Discounted Memberships
+  </div>
+
+  <div className="module-value">
+    {collectionSummary?.pausedMemberships ?? 0}
+  </div>
+
+  <div className="module-description">
+    Paused Memberships
   </div>
 </div>
 
@@ -1181,26 +1190,32 @@ if (!auth.authenticated) {
   </div>
 </div>
 
-{/* Membership Adjustments */}
+{/* Collection Fees */}
 <div className="module-card">
   <div className="module-title">
-    Membership Adjustments
+    Collection Fees
   </div>
 
   <div className="module-value">
-    {membersSummary?.discounts?.discountedMembers ?? 0}
+    £{(membersSummary?.payments?.totalCollectionFees ?? 0).toLocaleString(
+      "en-GB",
+      {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }
+    )}
   </div>
 
   <div className="module-description">
-    Discounted Memberships
+    TFP £{(membersSummary?.payments?.totalTfpFees ?? 0).toFixed(2)}
+    {" · "}
+    Stripe £{(membersSummary?.payments?.totalStripeFees ?? 0).toFixed(2)}
+    {" · "}
+    VAT £{(membersSummary?.payments?.totalVat ?? 0).toFixed(2)}
   </div>
 
-  <div className="module-value">
-    {collectionSummary.pausedMemberships ?? 0}
-  </div>
-
-  <div className="module-description">
-    Paused Memberships
+  <div className="module-detail">
+    Subscription collection costs — FYTD
   </div>
 </div>
 
