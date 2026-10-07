@@ -1175,14 +1175,14 @@ if (!auth.authenticated) {
     Paid by Members
   </div>
 
-£{(membersSummary?.payments?.totalPaidByUsers ?? 0).toLocaleString(
-  "en-GB",
-  {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }
-)}
-
+  <div className="module-value">
+    £{(membersSummary?.payments?.totalPaidByUsers ?? 0).toLocaleString(
+      "en-GB",
+      {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }
+    )}
   </div>
 
   <div className="module-description">
