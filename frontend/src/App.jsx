@@ -444,7 +444,12 @@ if (!auth.authenticated) {
           Members
         </button>
 
-        
+      {membershipPilot?.available && (
+          <button className={`nav-item ${currentSection === "membership-pilot" ? "active" : ""}`}
+            onClick={() => { setCurrentSection("membership-pilot"); setMobileMenuOpen(false); }}>
+            Membership pilot
+          </button>
+        )}    
 
         <button
           className={`nav-item ${
@@ -513,12 +518,7 @@ if (!auth.authenticated) {
           Organisation
         </button>
 
-        {membershipPilot?.available && (
-          <button className={`nav-item ${currentSection === "membership-pilot" ? "active" : ""}`}
-            onClick={() => { setCurrentSection("membership-pilot"); setMobileMenuOpen(false); }}>
-            Membership pilot
-          </button>
-        )}
+      
       </nav>
 <div className="sidebar-footer">
   {auth.user && (
