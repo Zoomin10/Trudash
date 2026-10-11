@@ -441,7 +441,7 @@ if (!auth.authenticated) {
             setMobileMenuOpen(false);
           }}
         >
-          Members
+          Members in TeamFeePay
         </button>
 
       {membershipPilot?.available && (
