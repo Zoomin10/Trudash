@@ -38,6 +38,19 @@ function signAssertion(secret, req, path) {
   const signature = crypto.createHmac("sha256", secret).update(`${header}.${payload}`).digest("base64url");
   return `${header}.${payload}.${signature}`;
 }
+function isMembershipAdmin(admins, username) {
+  const email = String(username || "").trim().toLowerCase();
+  const parts = email.split("@");
+
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return false;
+
+  return admins.some((entry) =>
+    entry.startsWith("@")
+      ? parts[1] === entry.slice(1)
+      : email === entry
+  );
+}
+
 function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } = {}) {
   const router = express.Router();
   router.use((req, res, next) => {
@@ -47,14 +60,14 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } = 
   });
   router.get("/config", (req, res) => {
     const config = configuration(env);
-    const allowed = config.ready && config.admins.includes(req.session.user.username?.toLowerCase());
+    const allowed = config.ready && isMembershipAdmin(config.admins, req.session.user.username)
     res.json({ enabled: config.enabled, available: Boolean(allowed), registrationUrl: allowed ? config.registrationUrl : null });
   });
   router.use(async (req, res) => {
     const config = configuration(env);
     if (!config.enabled) return res.status(404).json({ error: "Membership pilot is disabled" });
     if (!config.ready) return res.status(503).json({ error: "Membership pilot is not configured" });
-    if (!config.admins.includes(req.session.user.username?.toLowerCase())) return res.status(403).json({ error: "Membership administrator access required" });
+    if (!isMembershipAdmin(config.admins, req.session.user.username)) return res.status(403).json({ error: "Membership administrator access required" });
     if (!permittedPath(req.method, req.path) || req.url.includes("?")) return res.status(404).json({ error: "Unknown membership action" });
     if (!["GET", "HEAD"].includes(req.method)) {
       // Cookie-based Microsoft sessions must not authorize cross-site mutations.
