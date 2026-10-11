@@ -23,7 +23,7 @@ function configuration(env) {
 function permittedPath(method, path) {
   return (method === "GET" && ["/members", "/registrations.csv"].includes(path)) ||
     (method === "GET" && /^\/registrations\/[A-Za-z0-9_-]+\/invoices$/.test(path)) ||
-    (method === "POST" && /^\/registrations\/[A-Za-z0-9_-]+\/(invoices\/sync|billing\/cancel)$/.test(path)) ||
+    (method === "POST" && /^\/registrations\/[A-Za-z0-9_-]+\/(invoices\/sync|billing\/cancel|payment-setup)$/.test(path)) ||
     (method === "DELETE" && /^\/registrations\/[A-Za-z0-9_-]+$/.test(path));
 }
 function signAssertion(secret, req, path) {
