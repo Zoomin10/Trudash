@@ -67,7 +67,7 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } = 
     const config = configuration(env);
     if (!config.enabled) return res.status(404).json({ error: "Membership pilot is disabled" });
     if (!config.ready) return res.status(503).json({ error: "Membership pilot is not configured" });
-    if (isMembershipAdmin(config.admins, req.session.user.username)) return res.status(403).json({ error: "Membership administrator access required" });
+    if (!isMembershipAdmin(config.admins, req.session.user.username)) return res.status(403).json({ error: "Membership administrator access required" });
     if (!permittedPath(req.method, req.path) || req.url.includes("?")) return res.status(404).json({ error: "Unknown membership action" });
     if (!["GET", "HEAD"].includes(req.method)) {
       // Cookie-based Microsoft sessions must not authorize cross-site mutations.
