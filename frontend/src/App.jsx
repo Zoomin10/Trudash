@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import DocumentRegister from "./components/DocumentRegister";
+import MembershipPilot from "./components/MembershipPilot";
 import {
   Scale,
   Users,
@@ -66,6 +67,7 @@ const documentationCategories = {
 
 function App() {
 const [documentationData, setDocumentationData] = useState({});
+const [membershipPilot, setMembershipPilot] = useState(null);
 const [error, setError] = useState(null);
 const [currentSection, setCurrentSection] = useState("overview");
 const [currentTab, setCurrentTab] = useState("policies");
@@ -84,6 +86,16 @@ const [auth, setAuth] = useState({
   authenticated: false,
   user: null,
 });
+
+useEffect(() => {
+  if (!auth.authenticated) return;
+  let cancelled = false;
+  fetch("/api/membership-pilot/config")
+    .then((response) => response.ok ? response.json() : null)
+    .then((data) => { if (!cancelled) setMembershipPilot(data); })
+    .catch(() => { if (!cancelled) setMembershipPilot(null); });
+  return () => { cancelled = true; };
+}, [auth.authenticated]);
 
 useEffect(() => {
   if (!auth.authenticated) return;
@@ -501,6 +513,12 @@ if (!auth.authenticated) {
           Organisation
         </button>
 
+        {membershipPilot?.available && (
+          <button className={`nav-item ${currentSection === "membership-pilot" ? "active" : ""}`}
+            onClick={() => { setCurrentSection("membership-pilot"); setMobileMenuOpen(false); }}>
+            Membership pilot
+          </button>
+        )}
       </nav>
 <div className="sidebar-footer">
   {auth.user && (
@@ -554,6 +572,9 @@ if (!auth.authenticated) {
 </header>
 
       <main className="dashboard-content">
+        {currentSection === "membership-pilot" && membershipPilot?.available && (
+          <MembershipPilot registrationUrl={membershipPilot.registrationUrl} />
+        )}
 
 
         {/* =====================================================
@@ -1659,6 +1680,7 @@ if (!auth.authenticated) {
 
        {currentSection !== "overview" &&
   currentSection !== "documentation" &&
+  currentSection !== "membership-pilot" &&
   currentSection !== "members" &&
     currentSection !== "safeguarding" &&  (
             <>

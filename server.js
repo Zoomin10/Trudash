@@ -99,6 +99,9 @@ function requireAuth(req, res, next) {
   next();
 }
 
+const { createMembershipPilotRouter } = require("./routes/membershipPilot");
+app.use("/api/membership-pilot", createMembershipPilotRouter());
+
 app.get("/auth/login", async (req, res) => {
   try {
     const authUrl = await msalClient.getAuthCodeUrl(
