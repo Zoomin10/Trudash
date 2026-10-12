@@ -21,17 +21,20 @@ function configuration(env) {
   return { enabled, admins, backend, registrationUrl, secret, ready: Boolean(ready) };
 }
 function permittedPath(method, path) {
-  return (method === "GET" && ["/members", "/registrations.csv"].includes(path)) ||
+  return (method === "GET" && path === "/volunteers") ||
+    (method === "PATCH" && /^\/volunteers\/[A-Za-z0-9_-]+$/.test(path)) ||
+    (method === "POST" && /^\/volunteers\/[A-Za-z0-9_-]+\/acceptance-link$/.test(path)) ||
+    (method === "GET" && ["/members", "/registrations.csv"].includes(path)) ||
     (method === "GET" && /^\/registrations\/[A-Za-z0-9_-]+\/invoices$/.test(path)) ||
     (method === "POST" && /^\/registrations\/[A-Za-z0-9_-]+\/(invoices\/sync|billing\/cancel|payment-setup)$/.test(path)) ||
     (method === "DELETE" && /^\/registrations\/[A-Za-z0-9_-]+$/.test(path));
 }
-function signAssertion(secret, req, path) {
+function signAssertion(secret, req, path, volunteerSuperAdmin = false) {
   const now = Math.floor(Date.now() / 1000);
   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
   const payload = Buffer.from(JSON.stringify({
     iss: "trudash", aud: "tcm-membership-admin", sub: req.session.user.username.toLowerCase(),
-    role: "membership_admin", iat: now, exp: now + 30, jti: crypto.randomUUID(),
+    role: "membership_admin", volunteerSuperAdmin, iat: now, exp: now + 30, jti: crypto.randomUUID(),
     method: req.method, path,
     bodyHash: crypto.createHash("sha256").update(JSON.stringify(req.body || null)).digest("hex"),
   })).toString("base64url");
@@ -75,11 +78,15 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } = 
       try { expectedOrigin = new URL(env.APP_BASE_URL).origin; } catch { return res.status(503).json({ error: "TruDash app URL is not configured" }); }
       if (req.get("origin") !== expectedOrigin) return res.status(403).json({ error: "Invalid request origin" });
     }
-    const upstreamPath = `/api/admin${req.path}`;
+    const upstreamPath = req.path.startsWith("/volunteers")
+      ? `/api/volunteers/admin${req.path.slice("/volunteers".length)}`
+      : `/api/admin${req.path}`;
+    const superAdmins = (env.VOLUNTEER_SUPER_ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(e => e && !e.startsWith("@"));
+    const volunteerSuperAdmin = superAdmins.includes(req.session.user.username.toLowerCase());
     try {
       const response = await fetchImpl(`${config.backend}${upstreamPath}`, {
         method: req.method,
-        headers: { "Content-Type": "application/json", "x-trudash-assertion": signAssertion(config.secret, req, upstreamPath) },
+        headers: { "Content-Type": "application/json", "x-trudash-assertion": signAssertion(config.secret, req, upstreamPath, volunteerSuperAdmin) },
         ...(["GET", "HEAD"].includes(req.method) ? {} : { body: JSON.stringify(req.body || null) }),
         signal: AbortSignal.timeout(30000), redirect: "error",
       });
