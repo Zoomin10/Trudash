@@ -1,26 +1,33 @@
-
-.volunteer-ui { color:#10245c; font-family:inherit; padding:24px; max-width:1200px; margin:auto; }
-.volunteer-ui h1 { font-size:2rem; margin:8px 0; }
-.volunteer-ui .v-card { background:white; border:1px solid #dce3ef; border-radius:16px; padding:24px; margin:18px 0; box-shadow:0 4px 18px #10245c08; }
-.volunteer-ui .v-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
-.volunteer-ui label { display:block; font-weight:600; }
-.volunteer-ui input:not([type=checkbox]), .volunteer-ui select, .volunteer-ui textarea { width:100%; padding:10px; border:1px solid #b7c5dc; border-radius:8px; box-sizing:border-box; margin-top:6px; background:white; color:#10245c; }
-.volunteer-ui .v-check { display:flex; align-items:flex-start; gap:10px; font-weight:400; margin:10px 0; }
-.volunteer-ui input[type=checkbox] { width:18px; height:18px; margin:2px 0; flex-shrink:0; }
-.volunteer-ui button, .volunteer-ui .v-button { background:#153ea3; color:white; border:0; border-radius:8px; padding:10px 16px; cursor:pointer; display:inline-block; text-decoration:none; }
-.volunteer-ui button:disabled { opacity:.5; cursor:wait; }
-.volunteer-ui .v-actions { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:18px; }
-.volunteer-ui .v-error { color:#991b1b; background:#fff1f2; padding:12px; border-radius:8px; }
-.volunteer-ui .v-success { color:#166534; background:#f0fdf4; padding:12px; border-radius:8px; }
-.volunteer-ui .v-agreement { max-height:320px; overflow:auto; white-space:pre-wrap; border:1px solid #dce3ef; background:#f8fafc; border-radius:8px; padding:16px; line-height:1.6; }
-.volunteer-ui .v-table { overflow:auto; }
-.volunteer-ui table { width:100%; border-collapse:collapse; }
-.volunteer-ui th, .volunteer-ui td { text-align:left; padding:12px; border-bottom:1px solid #e2e8f0; vertical-align:top; }
-.volunteer-ui th { background:#f4f6fb; }
-.volunteer-ui .v-muted { color:#566887; font-size:.9rem; }
-.volunteer-ui .v-badge { display:inline-block; padding:5px 9px; border-radius:20px; background:#eef2ff; font-size:.8rem; }
-.volunteer-ui .v-dialog { position:fixed; inset:0; z-index:2000; background:#0f172a80; display:flex; align-items:center; justify-content:center; padding:20px; }
-.volunteer-ui .v-panel { background:white; border-radius:16px; padding:24px; max-width:850px; width:100%; max-height:90vh; overflow:auto; }
-.volunteer-ui .v-header { display:flex; justify-content:space-between; gap:16px; align-items:center; }
-.volunteer-ui :focus-visible { outline:3px solid #548cf8; outline-offset:3px; }
-@media(max-width:650px) { .volunteer-ui { padding:14px; } .volunteer-ui .v-grid { grid-template-columns:1fr; } .volunteer-ui .v-card { padding:16px; } }
+/* Shared directory and profile styles come from MembershipPilot.css. */
+.club-volunteers .volunteer-filters { grid-template-columns:2fr 1fr 1fr; }
+.club-volunteers .volunteers-table { min-width:1000px; }
+.club-volunteers .volunteers-table td:nth-child(2) { max-width:300px; }
+.club-volunteers .volunteer-hint { font-size:12px; color:var(--muted); line-height:1.6; margin:8px 0 14px; }
+.club-volunteers .volunteer-role-tags { display:flex; gap:8px; flex-wrap:wrap; }
+.club-volunteers .volunteer-role-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.club-volunteers .volunteer-role-choice { display:flex; align-items:center; gap:10px; padding:12px 14px; background:#f8fafd; border:1px solid var(--line); border-radius:9px; font-size:12px; cursor:pointer; }
+.club-volunteers .volunteer-role-choice.is-selected { border-color:#a6bce3; background:#edf2fc; color:var(--blue); }
+.club-volunteers .volunteer-role-choice input[type=checkbox] { width:17px; height:17px; padding:0; margin:0; flex-shrink:0; accent-color:var(--blue); }
+.club-volunteers .volunteer-form-grid label, .club-volunteers .volunteer-form-label { display:block; font-size:12px; font-weight:600; color:var(--muted); }
+.club-volunteers textarea { width:100%; min-height:130px; resize:vertical; border:1px solid #d6deeb; background:white; color:var(--ink); font:inherit; padding:12px; border-radius:8px; margin-top:8px; }
+.club-volunteers select:disabled, .club-volunteers input:disabled, .club-volunteers textarea:disabled { opacity:.65; cursor:not-allowed; background:#f0f2f6; }
+.club-volunteers .volunteer-profile-footer { display:flex; align-items:center; justify-content:space-between; gap:15px; margin-top:28px; padding-top:20px; border-top:1px solid var(--line); }
+.club-volunteers .volunteer-profile-footer > span { font-size:11px; color:var(--muted); }
+.club-volunteers .volunteer-agreement-record { margin-bottom:12px; padding:16px; border:1px solid var(--line); border-radius:10px; }
+.club-volunteers .volunteer-agreement-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:13px; }
+.club-volunteers .volunteer-agreement-record summary { color:var(--blue); cursor:pointer; font-size:12px; font-weight:600; }
+.club-volunteers .volunteer-agreement-text { margin-top:12px; padding:15px; background:#f8fafd; border-radius:8px; max-height:350px; overflow:auto; white-space:pre-wrap; font-size:12px; line-height:1.7; }
+.club-volunteers .volunteer-acceptance-alert, .club-volunteers .volunteer-acceptance-success { padding:12px 15px; border-radius:8px; font-size:12px; line-height:1.6; }
+.club-volunteers .volunteer-acceptance-alert { background:#fff4df; color:#94620d; }
+.club-volunteers .volunteer-acceptance-success { background:#eaf7f0; color:#23714e; }
+.club-volunteers .volunteer-link-box { margin-top:12px; padding:15px; border:1px solid var(--line); border-radius:9px; background:#f8fafd; }
+.club-volunteers .volunteer-link-box button { margin-top:12px; }
+.club-volunteers [hidden] { display:none !important; }
+@media(max-width:1000px) { .club-volunteers .volunteer-filters { grid-template-columns:2fr 1fr 1fr; } }
+@media(max-width:650px) {
+  .club-volunteers .volunteer-filters, .club-volunteers .volunteer-role-grid { grid-template-columns:1fr; }
+  .club-volunteers .volunteer-profile-footer { align-items:flex-start; flex-direction:column; }
+  .club-volunteers .volunteer-profile-footer .download-btn { width:100%; }
+  .club-volunteers .directory-footer { align-items:flex-start; flex-direction:column; }
+  .club-volunteers .volunteer-agreement-heading { align-items:flex-start; }
+}
