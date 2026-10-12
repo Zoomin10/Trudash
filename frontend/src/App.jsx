@@ -486,46 +486,23 @@ if (!auth.authenticated) {
           Finance
         </button>
 
-        <button
-          className={`nav-item ${
-            currentSection === "risk" ? "active" : ""
-          }`}
-          onClick={() => {
-            setCurrentSection("risk");
-            setCurrentTab("risk-register");
-            setMobileMenuOpen(false);
-          }}
-        >
-          Risk & Compliance
-        </button>
-
-        <button
-          className={`nav-item ${
-            currentSection === "governance" ? "active" : ""
-          }`}
-          onClick={() => {
-            setCurrentSection("governance");
-            setCurrentTab("trustees");
-            setMobileMenuOpen(false);
-          }}
-        >
-          Governance
-        </button>
-
-        <button
-          className={`nav-item ${
-            currentSection === "organisation" ? "active" : ""
-          }`}
-          onClick={() => {
-            setCurrentSection("organisation");
-            setCurrentTab("overview");
-            setMobileMenuOpen(false);
-          }}
-        >
-          Organisation
-        </button>
-
-      
+        {[
+          ["tournament-manager", "Tournament Manager"],
+          ["events-leaderboard", "Events Leaderboard App"],
+          ["club-assets", "Club Assets"],
+        ].map(([section, label]) => (
+          <button
+            key={section}
+            className={`nav-item ${currentSection === section ? "active" : ""}`}
+            onClick={() => {
+              setCurrentSection(section);
+              setCurrentTab("overview");
+              setMobileMenuOpen(false);
+            }}
+          >
+            {label}
+          </button>
+        ))}
 
       </nav>
 <div className="sidebar-footer">
@@ -1701,6 +1678,9 @@ if (!auth.authenticated) {
 
                 <h2>
                   {currentSection === "finance" && "Finance"}
+                  {currentSection === "tournament-manager" && "Tournament Manager"}
+                  {currentSection === "events-leaderboard" && "Events Leaderboard App"}
+                  {currentSection === "club-assets" && "Club Assets"}
                   {currentSection === "safeguarding" &&
                     "Safeguarding"}
                   {currentSection === "complaints" &&
