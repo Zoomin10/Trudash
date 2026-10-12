@@ -1,0 +1,20 @@
+.social-media .social-stats { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.social-media .social-muted { font-size:12px; color:var(--muted); line-height:1.6; }
+.social-media .social-add-card { background:white; border:1px solid var(--line); border-radius:14px; padding:24px; margin:0 0 24px; }
+.social-media .social-add-card h2 { font-size:18px; margin:0; }
+.social-media .social-form-grid { display:grid; grid-template-columns:2fr 1fr; gap:14px; margin:18px 0; }
+.social-media label { display:block; color:var(--muted); font-size:12px; font-weight:600; }
+.social-media .social-toolbar { display:flex; align-items:flex-end; gap:18px; padding:20px 24px 10px; }
+.social-media .social-toolbar label { flex:1; }
+.social-media .social-summary-note { font-size:12px; color:var(--muted); padding:0 24px 10px; }
+.social-media .social-post-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; padding:0 24px 24px; align-items:start; }
+.social-media .social-post-card { border:1px solid var(--line); border-radius:12px; padding:18px; min-width:0; }
+.social-media .social-post-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.social-media .social-post-card h3 { font-size:16px; margin:14px 0 5px; overflow-wrap:anywhere; }
+.social-media .social-preview { width:100%; overflow:hidden; margin:16px 0; }
+.social-media .social-preview iframe { border:0; max-width:100%; }
+.social-media .social-preview .instagram-media { max-width:100% !important; min-width:0 !important; width:100% !important; }
+.social-media .social-page-timeline { margin-top:24px; }
+.social-media .social-page-timeline .social-preview { max-width:500px; }
+@media(max-width:1000px) { .social-media .social-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:650px) { .social-media .social-post-grid, .social-media .social-form-grid { grid-template-columns:1fr; } .social-media .social-toolbar { align-items:stretch; flex-direction:column; } .social-media .social-post-grid { padding:0 16px 16px; } }

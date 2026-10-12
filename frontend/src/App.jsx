@@ -3,6 +3,7 @@ import "./App.css";
 import DocumentRegister from "./components/DocumentRegister";
 import MembershipPilot from "./components/MembershipPilot";
 import ClubVolunteers from "./components/ClubVolunteers";
+import SocialMedia from "./components/SocialMedia";
 import {
   Scale,
   Users,
@@ -504,6 +505,12 @@ if (!auth.authenticated) {
           </button>
         ))}
 
+        {membershipPilot?.available && (
+          <button className={`nav-item ${currentSection === "social-media" ? "active" : ""}`}
+            onClick={() => { setCurrentSection("social-media"); setMobileMenuOpen(false); }}>
+            Social Media
+          </button>
+        )}
       </nav>
 <div className="sidebar-footer">
   {auth.user && (
@@ -557,6 +564,7 @@ if (!auth.authenticated) {
 </header>
 
       <main className="dashboard-content">
+        {currentSection === "social-media" && membershipPilot?.available && <SocialMedia />}
         {currentSection === "club-volunteers" && membershipPilot?.available && (
           <ClubVolunteers registrationUrl={membershipPilot.registrationUrl} />
         )}
@@ -1670,6 +1678,7 @@ if (!auth.authenticated) {
   currentSection !== "documentation" &&
   currentSection !== "membership-pilot" &&
   currentSection !== "club-volunteers" &&
+  currentSection !== "social-media" &&
   currentSection !== "members" &&
     currentSection !== "safeguarding" &&  (
             <>

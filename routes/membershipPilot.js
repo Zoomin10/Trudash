@@ -21,7 +21,9 @@ function configuration(env) {
   return { enabled, admins, backend, registrationUrl, secret, ready: Boolean(ready) };
 }
 function permittedPath(method, path) {
-  return (method === "GET" && path === "/volunteers") ||
+  return (["GET", "POST"].includes(method) && path === "/social-posts") ||
+    (method === "DELETE" && /^\/social-posts\/[A-Za-z0-9_-]+$/.test(path)) ||
+    (method === "GET" && path === "/volunteers") ||
     (method === "PATCH" && /^\/volunteers\/[A-Za-z0-9_-]+$/.test(path)) ||
     (method === "POST" && /^\/volunteers\/[A-Za-z0-9_-]+\/acceptance-link$/.test(path)) ||
     (method === "GET" && ["/members", "/registrations.csv"].includes(path)) ||
@@ -78,7 +80,9 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } = 
       try { expectedOrigin = new URL(env.APP_BASE_URL).origin; } catch { return res.status(503).json({ error: "TruDash app URL is not configured" }); }
       if (req.get("origin") !== expectedOrigin) return res.status(403).json({ error: "Invalid request origin" });
     }
-    const upstreamPath = req.path.startsWith("/volunteers")
+    const upstreamPath = req.path.startsWith("/social-posts")
+      ? `/api/social-media/admin${req.path.slice("/social-posts".length)}`
+      : req.path.startsWith("/volunteers")
       ? `/api/volunteers/admin${req.path.slice("/volunteers".length)}`
       : `/api/admin${req.path}`;
     const superAdmins = (env.VOLUNTEER_SUPER_ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(e => e && !e.startsWith("@"));
