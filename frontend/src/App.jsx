@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "./App.css";
 import DocumentRegister from "./components/DocumentRegister";
 import MembershipPilot from "./components/MembershipPilot";
+import ClubVolunteers from "./components/ClubVolunteers";
 import {
   Scale,
   Users,
@@ -449,6 +450,12 @@ if (!auth.authenticated) {
             onClick={() => { setCurrentSection("membership-pilot"); setMobileMenuOpen(false); }}>
             Membership pilot
           </button>
+        )}
+        {membershipPilot?.available && (
+          <button className={`nav-item ${currentSection === "club-volunteers" ? "active" : ""}`}
+            onClick={() => { setCurrentSection("club-volunteers"); setMobileMenuOpen(false); }}>
+            Club volunteers
+          </button>
         )}    
 
         <button
@@ -519,6 +526,7 @@ if (!auth.authenticated) {
         </button>
 
       
+
       </nav>
 <div className="sidebar-footer">
   {auth.user && (
@@ -572,6 +580,9 @@ if (!auth.authenticated) {
 </header>
 
       <main className="dashboard-content">
+        {currentSection === "club-volunteers" && membershipPilot?.available && (
+          <ClubVolunteers registrationUrl={membershipPilot.registrationUrl} />
+        )}
         {currentSection === "membership-pilot" && membershipPilot?.available && (
           <MembershipPilot registrationUrl={membershipPilot.registrationUrl} />
         )}
@@ -1681,6 +1692,7 @@ if (!auth.authenticated) {
        {currentSection !== "overview" &&
   currentSection !== "documentation" &&
   currentSection !== "membership-pilot" &&
+  currentSection !== "club-volunteers" &&
   currentSection !== "members" &&
     currentSection !== "safeguarding" &&  (
             <>
