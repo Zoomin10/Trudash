@@ -1,10 +1,8 @@
 const express = require("express");
 const crypto = require("crypto");
-const { namedUserAllowed } = require("../services/privacyAccess");
 
 function configuration(env) {
   const enabled = env.MEMBERSHIP_PILOT_ENABLED === "true";
-  const admins = (env.MEMBERSHIP_PILOT_ADMIN_EMAILS || "").split(",").map((email) => email.trim().toLowerCase()).filter(Boolean);
   let backend = null;
   let registrationUrl = null;
   try {
@@ -19,7 +17,7 @@ function configuration(env) {
   } catch { backend = null; registrationUrl = null; }
   const secret = env.TRUDASH_MEMBERSHIP_SHARED_SECRET;
   const ready = enabled && backend && registrationUrl && secret && Buffer.byteLength(secret) >= 32;
-  return { enabled, admins, backend, registrationUrl, secret, ready: Boolean(ready) };
+  return { enabled, backend, registrationUrl, secret, ready: Boolean(ready) };
 }
 function permittedPath(method, path) {
   return (["GET", "POST"].includes(method) && path === "/social-posts") ||
@@ -45,9 +43,7 @@ function signAssertion(secret, req, path, volunteerSuperAdmin = false, fullCsvEx
   const signature = crypto.createHmac("sha256", secret).update(`${header}.${payload}`).digest("base64url");
   return `${header}.${payload}.${signature}`;
 }
-function isMembershipAdmin(admins, username) {
-  return namedUserAllowed(admins.join(","), username);
-}
+
 
 function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } = {}) {
   const router = express.Router();
@@ -58,33 +54,26 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } = 
   });
   router.get("/config", async (req, res) => {
     const config = configuration(env);
-    const memberAllowed = config.ready && isMembershipAdmin(config.admins, req.session.user.username);
-    let volunteersAvailable = false;
-    let volunteerAccessUnavailable = false;
-    if (config.ready) {
-      try {
-        const path = "/api/volunteers/admin/access";
-        const bootstrap = namedUserAllowed(env.VOLUNTEER_SUPER_ADMIN_EMAILS, req.session.user.username);
-        const response = await fetchImpl(`${config.backend}${path}`, {
-          headers: { "x-trudash-assertion": signAssertion(config.secret, req, path, bootstrap, false, "volunteers") },
-          signal: AbortSignal.timeout(8000), redirect: "error",
-        });
-        if (!response.ok) throw new Error("Volunteer permission lookup failed");
-        const access = await response.json();
-        volunteersAvailable = access.available === true;
-      } catch { volunteerAccessUnavailable = true; }
-    }
-    res.json({ enabled: config.enabled, available: Boolean(memberAllowed),
-      volunteersAvailable, volunteerAccessUnavailable,
-      registrationUrl: memberAllowed || volunteersAvailable ? config.registrationUrl : null });
+    try {
+      const access = await require("../services/applicationAccess").getApplicationAccess(req, env, fetchImpl);
+      const memberAllowed = access.permissions.includes("MEMBERS_MANAGE");
+      const volunteersAvailable = access.permissions.includes("VOLUNTEERS_MANAGE");
+      res.json({enabled:config.enabled,available:memberAllowed,volunteersAvailable,
+        registrationUrl:memberAllowed || volunteersAvailable ? config.registrationUrl : null});
+    } catch { res.status(503).json({error:"Application permissions could not be checked"}); }
   });
+
   router.use(async (req, res) => {
     const config = configuration(env);
     if (!config.enabled) return res.status(404).json({ error: "Membership pilot is disabled" });
     if (!config.ready) return res.status(503).json({ error: "Membership pilot is not configured" });
     const isVolunteerPath = req.path === "/volunteers" || req.path.startsWith("/volunteers/");
     const scope = isVolunteerPath ? "volunteers" : req.path.startsWith("/social-posts") ? "social" : "members";
-    if (!isVolunteerPath && !isMembershipAdmin(config.admins, req.session.user.username)) return res.status(403).json({ error: "Membership administrator access required" });
+    let access;
+    try { access = await require("../services/applicationAccess").getApplicationAccess(req, env, fetchImpl); }
+    catch { return res.status(503).json({error:"Application permissions could not be checked"}); }
+    const requiredPermission = isVolunteerPath ? "VOLUNTEERS_MANAGE" : "MEMBERS_MANAGE";
+    if (!access.permissions.includes(requiredPermission)) return res.status(403).json({error:"Application permission required"});
     if (!permittedPath(req.method, req.path) || req.url.includes("?")) return res.status(404).json({ error: "Unknown membership action" });
     if (!["GET", "HEAD"].includes(req.method)) {
       // Cookie-based Microsoft sessions must not authorize cross-site mutations.
@@ -92,7 +81,7 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } = 
       try { expectedOrigin = new URL(env.APP_BASE_URL).origin; } catch { return res.status(503).json({ error: "TruDash app URL is not configured" }); }
       if (req.get("origin") !== expectedOrigin) return res.status(403).json({ error: "Invalid request origin" });
     }
-    const fullCsvExport = namedUserAllowed(env.TRUDASH_FULL_CSV_EXPORT_EMAILS, req.session.user.username);
+    const fullCsvExport = access.permissions.includes("FULL_CSV_EXPORT");
     if (req.path === "/registrations.csv" && !fullCsvExport) {
       return res.status(403).json({ error: "Full registration export permission required" });
     }

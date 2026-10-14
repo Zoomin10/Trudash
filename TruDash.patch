@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 diff --git a/db/sessions.sql b/db/sessions.sql
 new file mode 100644
 index 0000000..5ebc356
@@ -569,6 +570,241 @@ index 0000000..bafaaa3
 --- /dev/null
 +++ b/tests/collectionEndpoint.test.cjs
 @@ -0,0 +1,44 @@
+=======
+diff --git a/frontend/src/components/ClubVolunteers.jsx b/frontend/src/components/ClubVolunteers.jsx
+index c8c319d..a2e30f4 100644
+--- a/frontend/src/components/ClubVolunteers.jsx
++++ b/frontend/src/components/ClubVolunteers.jsx
+@@ -30,11 +30,11 @@ function Detail({ label, children }) {
+   return <div className="detail"><span>{label}</span><strong>{children || "Not recorded"}</strong></div>;
+ }
+ 
+-function VolunteerPanel({ volunteer, roles, superAdmin, onClose, onSaved }) {
++function VolunteerPanel({ volunteer, roles, permissionOptions, superAdmin, onClose, onSaved }) {
+   const [tab, setTab] = useState("roles");
+   const [form, setForm] = useState({
+     assignedRoles: volunteer.assignedRoles, status: volunteer.status, notes: volunteer.notes,
+-    accessRole: volunteer.accessRole, updatedAt: volunteer.updatedAt,
++    applicationPermissions: volunteer.applicationPermissions || [], accessRole: volunteer.accessRole, updatedAt: volunteer.updatedAt,
+   });
+   const [busy, setBusy] = useState(false);
+   const [error, setError] = useState("");
+@@ -87,7 +87,7 @@ function VolunteerPanel({ volunteer, roles, superAdmin, onClose, onSaved }) {
+     try { await navigator.clipboard.writeText(link); }
+     catch { setError("Select the link below and copy it to share with the volunteer."); }
+   }
+-  const locked = volunteer.accessRole === "SUPER_ADMIN" && !superAdmin;
++  const locked = (volunteer.accessRole === "SUPER_ADMIN" || (volunteer.applicationPermissions || []).length > 0) && !superAdmin;
+   const rolesChanged = [...form.assignedRoles].sort().join("|") !== [...volunteer.assignedRoles].sort().join("|");
+ 
+   return <div className="modal-backdrop" onClick={onClose}>
+@@ -111,9 +111,10 @@ function VolunteerPanel({ volunteer, roles, superAdmin, onClose, onSaved }) {
+             </label>)}</div></section>
+           <section className="modal-section"><h3>Review & administration</h3><div className="modal-grid volunteer-form-grid">
+             <label>Review status<select disabled={locked || busy} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}><option value="AWAITING_REVIEW">Awaiting review</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></select></label>
+-            <label>Volunteer administration access<select disabled={!superAdmin || busy} value={form.accessRole} onChange={(event) => setForm({ ...form, accessRole: event.target.value })}><option value="NONE">None</option><option value="ADMIN">Admin</option><option value="SUPER_ADMIN">Super Admin</option></select></label>
+-          </div><p className="volunteer-hint">{superAdmin ? "Admin and Super Admin grant volunteer management access only. The volunteer must be Active with current agreements accepted. None grants no access." : "Only a Super Admin can grant administration access. Access requires Active status and current agreements."}</p>{locked && <p className="volunteer-hint">A Super Admin must update this volunteer's roles, status or notes.</p>}</section>
++            <label>Permission administration level<select disabled={!superAdmin || busy} value={form.accessRole} onChange={(event) => setForm({ ...form, accessRole: event.target.value })}><option value="NONE">Standard user</option><option value="ADMIN">Standard user (legacy Admin)</option><option value="SUPER_ADMIN">Super Admin</option></select></label>
++          </div><p className="volunteer-hint">{superAdmin ? "Super Admin can assign application permissions. Other access comes from the permissions selected below. Active status and current agreements are required." : "Only a Super Admin can grant administration access. Access requires Active status and current agreements."}</p>{locked && <p className="volunteer-hint">A Super Admin must update records that hold application permissions.</p>}</section>
+         </div>
++        <section className="modal-section"><h3>Application permissions</h3><p className="volunteer-hint">These permissions are separate from club roles. Only a Super Admin can change them. Full CSV export also requires membership management.</p><div className="volunteer-role-grid">{permissionOptions.map(option => <label key={option.key}><input type="checkbox" disabled={!superAdmin || busy} checked={form.applicationPermissions.includes(option.key)} onChange={event => setForm({...form, applicationPermissions:event.target.checked ? [...form.applicationPermissions, option.key] : form.applicationPermissions.filter(key => key !== option.key)})} />{option.label}</label>)}</div></section>
+         <div hidden={tab !== "details"}>
+           <section className="modal-section"><h3>Contact details</h3><div className="modal-grid"><Detail label="Full name">{fullName(volunteer)}</Detail><Detail label="Email address">{volunteer.email}</Detail><Detail label="Telephone">{volunteer.phone}</Detail><Detail label="Team">{volunteer.team}</Detail><Detail label="Registered">{formatDate(volunteer.createdAt)}</Detail><Detail label="Registration reference">{volunteer.id}</Detail></div></section>
+           <section className="modal-section"><h3>Internal notes</h3><label className="volunteer-form-label">Notes for club administrators<textarea rows={5} maxLength={4000} disabled={locked || busy} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label></section>
+@@ -211,6 +212,6 @@ export default function ClubVolunteers({ registrationUrl }) {
+         <div className="directory-footer"><span>{filtered.length ? `Showing ${(currentPage - 1) * 20 + 1}–${Math.min(currentPage * 20, filtered.length)} of ${filtered.length} volunteers` : "0 volunteers"}</span><div className="pagination"><button className="secondary-btn compact-btn" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>Previous</button><span>Page {currentPage} of {pages}</span><button className="secondary-btn compact-btn" disabled={currentPage >= pages} onClick={() => setPage(currentPage + 1)}>Next</button></div></div>
+       </section>
+     </main>
+-    {selected && <VolunteerPanel key={selected.id} volunteer={selected} roles={data.roles} superAdmin={data.superAdmin} onClose={closePanel} onSaved={saved} />}
++    {selected && <VolunteerPanel key={selected.id} volunteer={selected} roles={data.roles} permissionOptions={data.permissionOptions || []} superAdmin={data.superAdmin} onClose={closePanel} onSaved={saved} />}
+   </div>;
+ }
+diff --git a/routes/membershipPilot.js b/routes/membershipPilot.js
+index c070994..ec57993 100644
+--- a/routes/membershipPilot.js
++++ b/routes/membershipPilot.js
+@@ -1,10 +1,8 @@
+ const express = require("express");
+ const crypto = require("crypto");
+-const { namedUserAllowed } = require("../services/privacyAccess");
+ 
+ function configuration(env) {
+   const enabled = env.MEMBERSHIP_PILOT_ENABLED === "true";
+-  const admins = (env.MEMBERSHIP_PILOT_ADMIN_EMAILS || "").split(",").map((email) => email.trim().toLowerCase()).filter(Boolean);
+   let backend = null;
+   let registrationUrl = null;
+   try {
+@@ -19,7 +17,7 @@ function configuration(env) {
+   } catch { backend = null; registrationUrl = null; }
+   const secret = env.TRUDASH_MEMBERSHIP_SHARED_SECRET;
+   const ready = enabled && backend && registrationUrl && secret && Buffer.byteLength(secret) >= 32;
+-  return { enabled, admins, backend, registrationUrl, secret, ready: Boolean(ready) };
++  return { enabled, backend, registrationUrl, secret, ready: Boolean(ready) };
+ }
+ function permittedPath(method, path) {
+   return (["GET", "POST"].includes(method) && path === "/social-posts") ||
+@@ -45,9 +43,7 @@ function signAssertion(secret, req, path, volunteerSuperAdmin = false, fullCsvEx
+   const signature = crypto.createHmac("sha256", secret).update(`${header}.${payload}`).digest("base64url");
+   return `${header}.${payload}.${signature}`;
+ }
+-function isMembershipAdmin(admins, username) {
+-  return namedUserAllowed(admins.join(","), username);
+-}
++
+ 
+ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } = {}) {
+   const router = express.Router();
+@@ -58,33 +54,26 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } =
+   });
+   router.get("/config", async (req, res) => {
+     const config = configuration(env);
+-    const memberAllowed = config.ready && isMembershipAdmin(config.admins, req.session.user.username);
+-    let volunteersAvailable = false;
+-    let volunteerAccessUnavailable = false;
+-    if (config.ready) {
+-      try {
+-        const path = "/api/volunteers/admin/access";
+-        const bootstrap = namedUserAllowed(env.VOLUNTEER_SUPER_ADMIN_EMAILS, req.session.user.username);
+-        const response = await fetchImpl(`${config.backend}${path}`, {
+-          headers: { "x-trudash-assertion": signAssertion(config.secret, req, path, bootstrap, false, "volunteers") },
+-          signal: AbortSignal.timeout(8000), redirect: "error",
+-        });
+-        if (!response.ok) throw new Error("Volunteer permission lookup failed");
+-        const access = await response.json();
+-        volunteersAvailable = access.available === true;
+-      } catch { volunteerAccessUnavailable = true; }
+-    }
+-    res.json({ enabled: config.enabled, available: Boolean(memberAllowed),
+-      volunteersAvailable, volunteerAccessUnavailable,
+-      registrationUrl: memberAllowed || volunteersAvailable ? config.registrationUrl : null });
++    try {
++      const access = await require("../services/applicationAccess").getApplicationAccess(req, env, fetchImpl);
++      const memberAllowed = access.permissions.includes("MEMBERS_MANAGE");
++      const volunteersAvailable = access.permissions.includes("VOLUNTEERS_MANAGE");
++      res.json({enabled:config.enabled,available:memberAllowed,volunteersAvailable,
++        registrationUrl:memberAllowed || volunteersAvailable ? config.registrationUrl : null});
++    } catch { res.status(503).json({error:"Application permissions could not be checked"}); }
+   });
++
+   router.use(async (req, res) => {
+     const config = configuration(env);
+     if (!config.enabled) return res.status(404).json({ error: "Membership pilot is disabled" });
+     if (!config.ready) return res.status(503).json({ error: "Membership pilot is not configured" });
+     const isVolunteerPath = req.path === "/volunteers" || req.path.startsWith("/volunteers/");
+     const scope = isVolunteerPath ? "volunteers" : req.path.startsWith("/social-posts") ? "social" : "members";
+-    if (!isVolunteerPath && !isMembershipAdmin(config.admins, req.session.user.username)) return res.status(403).json({ error: "Membership administrator access required" });
++    let access;
++    try { access = await require("../services/applicationAccess").getApplicationAccess(req, env, fetchImpl); }
++    catch { return res.status(503).json({error:"Application permissions could not be checked"}); }
++    const requiredPermission = isVolunteerPath ? "VOLUNTEERS_MANAGE" : "MEMBERS_MANAGE";
++    if (!access.permissions.includes(requiredPermission)) return res.status(403).json({error:"Application permission required"});
+     if (!permittedPath(req.method, req.path) || req.url.includes("?")) return res.status(404).json({ error: "Unknown membership action" });
+     if (!["GET", "HEAD"].includes(req.method)) {
+       // Cookie-based Microsoft sessions must not authorize cross-site mutations.
+@@ -92,7 +81,7 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } =
+       try { expectedOrigin = new URL(env.APP_BASE_URL).origin; } catch { return res.status(503).json({ error: "TruDash app URL is not configured" }); }
+       if (req.get("origin") !== expectedOrigin) return res.status(403).json({ error: "Invalid request origin" });
+     }
+-    const fullCsvExport = namedUserAllowed(env.TRUDASH_FULL_CSV_EXPORT_EMAILS, req.session.user.username);
++    const fullCsvExport = access.permissions.includes("FULL_CSV_EXPORT");
+     if (req.path === "/registrations.csv" && !fullCsvExport) {
+       return res.status(403).json({ error: "Full registration export permission required" });
+     }
+diff --git a/scripts/export-legacy-permissions.cjs b/scripts/export-legacy-permissions.cjs
+new file mode 100644
+index 0000000..66b053b
+--- /dev/null
++++ b/scripts/export-legacy-permissions.cjs
+@@ -0,0 +1,12 @@
++require('dotenv').config({quiet:true});
++const mapping={MEMBERSHIP_PILOT_ADMIN_EMAILS:'MEMBERS_MANAGE',TRUDASH_FINANCE_ADMIN_EMAILS:'FINANCE_DETAILS',TRUDASH_WELFARE_ADMIN_EMAILS:'WELFARE_DETAILS',TRUDASH_REPORT_ADMIN_EMAILS:'SOURCE_REPORTS',TRUDASH_FULL_CSV_EXPORT_EMAILS:'FULL_CSV_EXPORT'};
++const grants=new Map();
++for(const [variable,permission] of Object.entries(mapping)){
++ for(const raw of (process.env[variable]||'').split(',')){
++  const email=raw.trim().toLowerCase();if(!email)continue;
++  if(!/^[^\s@]+@[^\s@]+$/.test(email))throw Error(`${variable} contains a domain or invalid email; review named users before importing`);
++  if(!grants.has(email))grants.set(email,new Set());grants.get(email).add(permission);
++ }
++}
++// Output only email-to-permission mappings, never secrets or other variables.
++process.stdout.write(JSON.stringify({grants:[...grants].map(([email,permissions])=>({email,permissions:[...permissions]}))},null,2)+'\n');
+diff --git a/server.js b/server.js
+index c098fe1..d176d00 100644
+--- a/server.js
++++ b/server.js
+@@ -16,8 +16,9 @@ const {
+   getTeamFeePayVolunteerSummary,
+   inspectTeamFeePayAgreementReport,
+ } = require("./services/sharepointService");
+-const { namedUserAllowed, agreementAnalytics, complaintAnalytics, collectionResponse } = require("./services/privacyAccess");
++const { agreementAnalytics, complaintAnalytics, collectionResponse } = require("./services/privacyAccess");
+ const { createLoginAttempt, consumeLoginAttempt } = require("./services/loginFlow");
++const { getApplicationAccess } = require("./services/applicationAccess");
+ const app = express();
+ const PORT = process.env.PORT || 3001;
+ const {
+@@ -381,9 +382,8 @@ app.get(
+       const summary =
+         await getTeamFeePayCollectionSummary();
+ 
+-      const canViewDetails = namedUserAllowed(
+-        process.env.TRUDASH_FINANCE_ADMIN_EMAILS, req.session.user.username
+-      );
++      const access = await getApplicationAccess(req);
++      const canViewDetails = access.permissions.includes("FINANCE_DETAILS");
+       res.json(collectionResponse(summary, canViewDetails));
+     } catch (error) {
+       console.error(
+@@ -400,7 +400,10 @@ app.get(
+ );
+ 
+ app.get("/api/members/reports", requireAuth, async (req, res) => {
+-  if (!namedUserAllowed(process.env.TRUDASH_REPORT_ADMIN_EMAILS, req.session.user.username)) {
++  let access;
++  try { access = await getApplicationAccess(req); }
++  catch { return res.status(503).json({error:"Application permissions could not be checked"}); }
++  if (!access.permissions.includes("SOURCE_REPORTS")) {
+     return res.status(403).json({ error: "Source report administrator access required" });
+   }
+   try {
+@@ -442,7 +445,8 @@ app.get(
+   async (req, res) => {
+     try {
+       const summary = await getComplaintsSummary();
+-      const permitted = namedUserAllowed(process.env.TRUDASH_WELFARE_ADMIN_EMAILS, req.session.user.username);
++      const access = await getApplicationAccess(req);
++      const permitted = access.permissions.includes("WELFARE_DETAILS");
+       res.json(permitted ? summary : complaintAnalytics(summary));
+     } catch (error) {
+       console.error(
+diff --git a/services/applicationAccess.js b/services/applicationAccess.js
+new file mode 100644
+index 0000000..d513ff0
+--- /dev/null
++++ b/services/applicationAccess.js
+@@ -0,0 +1,15 @@
++const {configuration,signAssertion} = require('../routes/membershipPilot');
++const {namedUserAllowed} = require('./privacyAccess');
++async function getApplicationAccess(req, env=process.env, fetchImpl=fetch) {
++ const config=configuration(env);
++ if(!config.ready)throw new Error('Application permissions service is not configured');
++ const path='/api/access/me';
++ const probe={method:'GET',session:req.session,body:undefined};
++ const bootstrap=namedUserAllowed(env.VOLUNTEER_SUPER_ADMIN_EMAILS,req.session.user.username);
++ const response=await fetchImpl(`${config.backend}${path}`,{headers:{'x-trudash-assertion':signAssertion(config.secret,probe,path,bootstrap,false,'access')},redirect:'error',signal:AbortSignal.timeout(8000)});
++ if(!response.ok)throw new Error('Application permission lookup failed');
++ const data=await response.json();
++ if(!Array.isArray(data.permissions))throw new Error('Invalid application permissions');
++ return data;
++}
++module.exports={getApplicationAccess};
+diff --git a/tests/collectionEndpoint.test.cjs b/tests/collectionEndpoint.test.cjs
+new file mode 100644
+index 0000000..f2e153d
+--- /dev/null
++++ b/tests/collectionEndpoint.test.cjs
+@@ -0,0 +1,42 @@
+>>>>>>> 2d5f2e60984ec9d8869bc73c7e41732cc6062c00
 +const test = require('node:test');
 +const assert = require('node:assert/strict');
 +const vm = require('node:vm');
@@ -675,14 +911,23 @@ index 0000000..27d97b4
 +});
 diff --git a/tests/sessions.test.cjs b/tests/sessions.test.cjs
 new file mode 100644
+<<<<<<< HEAD
 index 0000000..5cb92ce
 --- /dev/null
 +++ b/tests/sessions.test.cjs
 @@ -0,0 +1,88 @@
 +const {test,before,after}=require('node:test');
+=======
+index 0000000..fdfb7b4
+--- /dev/null
++++ b/tests/roleSplit.test.cjs
+@@ -0,0 +1,85 @@
++const test=require('node:test');
+>>>>>>> 2d5f2e60984ec9d8869bc73c7e41732cc6062c00
 +const assert=require('node:assert/strict');
 +const fs=require('node:fs');const path=require('node:path');
 +const express=require('express');
+<<<<<<< HEAD
 +const {PGlite}=require('@electric-sql/pglite');
 +const {createSessionInfrastructure,sessionPolicy,expired}=require('../services/sessionService');
 +const {createSessionAdminRouter}=require('../routes/sessionAdmin');
@@ -766,4 +1011,83 @@ index 0000000..5cb92ce
 +
 +test('production session cookies require HTTPS and retain HttpOnly and SameSite controls',async t=>{
 + const f=await fixture(t,{production:true});const login=await f.login();assert.match(login.header,/Secure/);assert.match(login.header,/HttpOnly/);assert.match(login.header,/SameSite=Lax/);
+=======
++const crypto=require('node:crypto');
++const {createMembershipPilotRouter}=require('../routes/membershipPilot');
++// Cross-repository integration: override only the checkout location locally.
++const tcm=process.env.TCM_TEST_ROOT || path.resolve(__dirname,'../../TotalClubManagement');
++const backendRequire=createRequire(path.join(tcm,'backend/package.json'));
++const jwt=backendRequire('jsonwebtoken');
++const secret='test-only-role-split-'.repeat(4);
++process.env.TRUDASH_MEMBERSHIP_SHARED_SECRET=secret;
++process.env.TRUDASH_ONLY_ADMIN_AUTH='true';
++process.env.FRONTEND_URL='https://register.example';
++function load(relative,dependencies){const mod={exports:{}};vm.runInNewContext(fs.readFileSync(path.join(tcm,relative),'utf8'),{module:mod,exports:mod.exports,require:name=> name in dependencies?dependencies[name]:backendRequire(name),process,console:{error(){}},Buffer,URL,Date,Map});return mod.exports;}
++async function fixture(t){
++ const people=new Map();let reads=0;const changes=[];
++ const db={clubVolunteer:{findUnique:async({where})=>[...people.values()].find(v=>where.email?v.email===where.email:v.id===where.id)||null,findMany:async()=>{reads++;return [...people.values()]},update:async({where,data})=>{const v=people.get(where.id);Object.assign(v,data);return v;}},volunteerChange:{create:async args=>changes.push(args)}};
++ db.$transaction=async fn=>fn(db);
++ const service=load('backend/src/services/volunteerService.js',{'../prisma':db,'../content/volunteerAgreements.json':JSON.parse(fs.readFileSync(path.join(tcm,'backend/src/content/volunteerAgreements.json')))});
++ function person(id,accessRole='NONE',status='ACTIVE',accepted=true){const v={id,email:id+'@wwfc.org.uk',firstName:id,lastName:'Test',phone:'01234567890',team:null,assignedRoles:['Trustee'],requestedRoles:['Trustee'],status,accessRole,applicationPermissions:accessRole==='ADMIN'||accessRole==='SUPER_ADMIN'?['VOLUNTEERS_MANAGE']:id==='member'?['MEMBERS_MANAGE']:[],notes:'',createdAt:new Date(),updatedAt:new Date(),acceptances:accepted?service.agreements().filter(d=>d.key==='VOLUNTEER').map(d=>({agreement:d.key,version:d.version,content:d.content,acceptedAt:new Date()})):[]};people.set(id,v);return v;}
++ person('member');person('admin','ADMIN');person('super','SUPER_ADMIN');person('none');person('inactive','ADMIN','INACTIVE');person('unsigned','ADMIN','ACTIVE',false);person('target');
++ const verify=backendRequire(path.join(tcm,'backend/src/middleware/trudashAdmin'));
++ const permissionService=load('backend/src/services/applicationPermissions.js',{'./volunteerService':service});
++ const volunteers=load('backend/src/routes/volunteers.js',{'../services/volunteerService':service,'../middleware/trudashAdmin':verify,'../services/applicationPermissions':permissionService});
++ const accessRouter=load('backend/src/routes/applicationAccess.js',{'../middleware/trudashAdmin':verify,'../services/applicationPermissions':permissionService});
++ const app=express();app.use(express.json());app.use('/api/volunteers',volunteers);app.use('/api/access',accessRouter);
++ // Real bridge verifier also enforces the member scope, without querying member data.
++ app.get('/api/admin/members',(req,res)=>{if(verify.verifyTrudashAdmin(req,res))res.json({members:[{id:'member1'}]});});
++ const backend=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
++ t.after(()=>new Promise(resolve=>backend.close(resolve)));
++ const bridge=express();bridge.use(express.json());bridge.use((req,res,next)=>{req.session={user:{username:req.get('x-test-user')||'none@wwfc.org.uk'}};next();});
++ const env={MEMBERSHIP_PILOT_ENABLED:'true',MEMBERSHIP_PILOT_ADMIN_EMAILS:'member@wwfc.org.uk',TCM_BACKEND_URL:`http://127.0.0.1:${backend.address().port}`,TCM_REGISTRATION_URL:'https://register.example',TRUDASH_MEMBERSHIP_SHARED_SECRET:secret,VOLUNTEER_SUPER_ADMIN_EMAILS:'bootstrap@wwfc.org.uk',APP_BASE_URL:'https://trudash.example'};
++ bridge.use('/api/membership-pilot',createMembershipPilotRouter({env}));
++ const server=await new Promise(resolve=>{const s=bridge.listen(0,'127.0.0.1',()=>resolve(s));});t.after(()=>new Promise(resolve=>server.close(resolve)));
++ const root=`http://127.0.0.1:${server.address().port}/api/membership-pilot`;
++ async function call(user,route='/volunteers',method='GET',data){return fetch(root+route,{method,headers:{'x-test-user':user+'@wwfc.org.uk',Origin:env.APP_BASE_URL,'Content-Type':'application/json'},...(data?{body:JSON.stringify(data)}:{})});}
++ return {call,people,person,env,db,reads:()=>reads,changes,backendUrl:`http://127.0.0.1:${backend.address().port}`};
++}
++test('member admin has members but no volunteer directory or volunteer menu',async t=>{const f=await fixture(t);assert.equal((await f.call('member','/members')).status,200);assert.equal((await f.call('member')).status,403);assert.equal(f.reads(),0);const c=await(await f.call('member','/config')).json();assert.equal(c.available,true);assert.equal(c.volunteersAvailable,false);});
++test('volunteer admin and super admin have directory without member permission',async t=>{const f=await fixture(t);for(const user of ['admin','super','bootstrap']){const c=await(await f.call(user,'/config')).json();assert.equal(c.available,false);assert.equal(c.volunteersAvailable,true);assert.equal((await f.call(user)).status,200);assert.equal((await f.call(user,'/members')).status,403);}const data=await(await f.call('admin')).json();assert.equal(data.superAdmin,false);assert.equal((await(await f.call('bootstrap')).json()).superAdmin,true);});
++test('none, inactive and missing agreements fail closed before directory queries',async t=>{const f=await fixture(t);for(const user of ['none','inactive','unsigned']){assert.equal((await f.call(user)).status,403);assert.equal((await(await f.call(user,'/config')).json()).volunteersAvailable,false);}assert.equal(f.reads(),0);});
++test('revocation takes effect on next request, without signing out',async t=>{const f=await fixture(t);assert.equal((await f.call('admin')).status,200);f.people.get('admin').applicationPermissions=[];assert.equal((await f.call('admin')).status,403);});
++test('admin cannot grant access or edit super admin; super admin can grant then revoke',async t=>{const f=await fixture(t);const v=f.people.get('target');const update={updatedAt:v.updatedAt.toISOString(),assignedRoles:['Trustee'],status:'ACTIVE',notes:'',accessRole:'ADMIN',applicationPermissions:['VOLUNTEERS_MANAGE']};assert.equal((await f.call('admin','/volunteers/target','PATCH',update)).status,403);assert.equal(v.accessRole,'NONE');assert.equal((await f.call('super','/volunteers/target','PATCH',update)).status,200);assert.equal((await f.call('target')).status,200);assert.equal((await f.call('super','/volunteers/target','PATCH',{...update,accessRole:'NONE',applicationPermissions:[]})).status,200);assert.equal((await f.call('target')).status,403);assert.equal(f.changes.length,2);const s=f.people.get('super');assert.equal((await f.call('admin','/volunteers/super','PATCH',{...update,updatedAt:s.updatedAt.toISOString(),accessRole:'SUPER_ADMIN'})).status,403);assert.equal((await f.call('admin','/volunteers/super/acceptance-link','POST',{})).status,403);});
++test('signed volunteer assertion cannot be reused as member authority',async t=>{const f=await fixture(t);const route='/api/admin/members';const token=jwt.sign({sub:'admin@wwfc.org.uk',role:'membership_admin',scope:'volunteers',method:'GET',path:route,bodyHash:crypto.createHash('sha256').update('null').digest('hex'),jti:crypto.randomUUID()},secret,{issuer:'trudash',audience:'tcm-membership-admin',expiresIn:30});assert.equal((await fetch(f.backendUrl+route,{headers:{'x-trudash-assertion':token}})).status,401);});
++
++test('volunteer bootstrap works even without any member administrator list',async t=>{const f=await fixture(t);f.env.MEMBERSHIP_PILOT_ADMIN_EMAILS='';const config=await(await f.call('bootstrap','/config')).json();assert.equal(config.volunteersAvailable,true);assert.equal(config.available,false);assert.equal((await f.call('bootstrap')).status,200);assert.equal((await f.call('bootstrap','/members')).status,403);});
++test('permission lookup failure denies configuration and protected requests',async t=>{const f=await fixture(t);f.db.clubVolunteer.findUnique=async()=>{throw Error('database unavailable')};assert.equal((await f.call('member','/config')).status,503);assert.equal((await f.call('admin')).status,503);assert.equal(f.reads(),0);});
++
++test('None cannot mutate roles or generate acceptance links directly',async t=>{const f=await fixture(t);assert.equal((await f.call('none','/volunteers/target','PATCH',{})).status,403);assert.equal((await f.call('none','/volunteers/target/acceptance-link','POST',{})).status,403);assert.equal(f.changes.length,0);});
++
++test('club roles and old email variables do not grant application rights',async t=>{const f=await fixture(t);f.env.MEMBERSHIP_PILOT_ADMIN_EMAILS='none@wwfc.org.uk';assert.equal((await f.call('none','/members')).status,403);f.people.get('none').applicationPermissions=['MEMBERS_MANAGE'];assert.equal((await f.call('none','/members')).status,200);f.people.get('none').status='INACTIVE';assert.equal((await f.call('none','/members')).status,403);});
++test('standard volunteer admin cannot edit a finance-permission account or grant itself access',async t=>{const f=await fixture(t);const target=f.people.get('target');target.applicationPermissions=['FINANCE_DETAILS'];const update={updatedAt:target.updatedAt.toISOString(),assignedRoles:['Trustee'],status:'INACTIVE',notes:'',accessRole:'NONE',applicationPermissions:['FINANCE_DETAILS']};assert.equal((await f.call('admin','/volunteers/target','PATCH',update)).status,403);assert.equal(target.status,'ACTIVE');const actor=f.people.get('admin');assert.equal((await f.call('admin','/volunteers/admin','PATCH',{...update,updatedAt:actor.updatedAt.toISOString(),accessRole:'ADMIN',status:'ACTIVE',applicationPermissions:['VOLUNTEERS_MANAGE','FULL_CSV_EXPORT']})).status,403);});
++test('finance, welfare and source-report endpoints follow database grants and immediate revocation',async t=>{
++ const f=await fixture(t);let app;
++ const source=fs.readFileSync(path.join(__dirname,'../server.js'),'utf8');
++ const helpers=require('../services/privacyAccess');
++ vm.runInNewContext(source,{__dirname:path.join(__dirname,'..'),process:{env:{}},Buffer,URL,Promise,console:{log(){},error(){}},require(name){
++  if(name==='dotenv')return {config(){}};
++  if(name==='express'){const factory=()=>{app=express();app.listen=()=>{};return app;};factory.json=express.json;factory.static=express.static;return factory;}
++  if(name==='express-session')return ()=>(req,res,next)=>{req.session={user:{username:req.get('x-test-user')||'none@wwfc.org.uk'}};next();};
++  if(name==='./services/sharepointService')return {getTeamFeePayCollectionSummary:async()=>({totalOverdue:21,months:[],overdueMembers:[{firstName:'PRIVATE'}]}),getComplaintsSummary:async()=>({openComplaints:1,cases:[{caseRef:'PRIVATE'}]}),getTeamFeePayReports:async()=>[{name:'PRIVATE.xlsx'}]};
++  if(name==='./services/applicationAccess')return {getApplicationAccess:req=>require('../services/applicationAccess').getApplicationAccess(req,f.env)};
++  if(name==='./services/privacyAccess')return helpers;
++  if(name==='./services/loginFlow')return require('../services/loginFlow');
++  if(name==='./services/authService')return {};
++  if(name==='./routes/membershipPilot')return {createMembershipPilotRouter:()=>express.Router()};
++  return require(name);
++ }});
++ const server=await new Promise(resolve=>{const s=require('node:http').createServer(app);s.listen(0,'127.0.0.1',()=>resolve(s));});t.after(()=>new Promise(resolve=>server.close(resolve)));
++ async function read(route){return fetch(`http://127.0.0.1:${server.address().port}${route}`,{headers:{'x-test-user':'none@wwfc.org.uk'}});}
++ assert.equal(JSON.stringify(await(await read('/api/members/collections')).json()).includes('PRIVATE'),false);
++ assert.equal(JSON.stringify(await(await read('/api/welfare/complaints')).json()).includes('PRIVATE'),false);
++ assert.equal((await read('/api/members/reports')).status,403);
++ f.people.get('none').applicationPermissions=['FINANCE_DETAILS','WELFARE_DETAILS','SOURCE_REPORTS'];
++ assert.equal(JSON.stringify(await(await read('/api/members/collections')).json()).includes('PRIVATE'),true);
++ assert.equal(JSON.stringify(await(await read('/api/welfare/complaints')).json()).includes('PRIVATE'),true);
++ assert.equal((await read('/api/members/reports')).status,200);
++ f.people.get('none').applicationPermissions=[];
++ assert.equal(JSON.stringify(await(await read('/api/members/collections')).json()).includes('PRIVATE'),false);
++ assert.equal((await read('/api/members/reports')).status,403);
+>>>>>>> 2d5f2e60984ec9d8869bc73c7e41732cc6062c00
 +});
