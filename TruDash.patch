@@ -1,140 +1,293 @@
-diff --git a/frontend/src/components/MembershipPilot.jsx b/frontend/src/components/MembershipPilot.jsx
-index b70c3c5..d2f4363 100644
---- a/frontend/src/components/MembershipPilot.jsx
-+++ b/frontend/src/components/MembershipPilot.jsx
-@@ -24,6 +24,7 @@ export default function MembershipPilot({ registrationUrl }) {
-   const [loaded, setLoaded] = useState(false);
-   const [loading, setLoading] = useState(false);
-   const [exporting, setExporting] = useState(false);
-+  const [canExportFullCsv, setCanExportFullCsv] = useState(false);
-   const [error, setError] = useState("");
-   const [selected, setSelected] = useState(null);
-   const [filters, setFilters] = useState(emptyFilters);
-@@ -52,6 +53,7 @@ export default function MembershipPilot({ registrationUrl }) {
-       if (generation !== sessionGeneration.current || sequence !== requestNumber.current) return;
-       if (!Array.isArray(data.members)) throw new Error("Invalid members response");
-       setMembers(data.members); setLoaded(true);
-+      setCanExportFullCsv(data.permissions?.fullCsvExport === true);
-       setSelected((current) => current ? data.members.find((member) => member.id === current.id) || null : null);
-     } catch (err) {
-       if (generation === sessionGeneration.current && sequence === requestNumber.current) setError(err.message);
-@@ -77,6 +79,7 @@ export default function MembershipPilot({ registrationUrl }) {
-     return () => { clearTimeout(timeout); events.forEach((event) => window.removeEventListener(event, reset)); };
-   }, [authenticated, logout]);
-   async function downloadCsv() {
-+    if (!canExportFullCsv || !window.confirm("This full report includes medical declarations, allergies and personal contact details. Download only for an authorised purpose and store it securely. Continue?")) return;
-     setExporting(true); setError("");
-     try {
-       const response = await fetch(`${API_BASE}/registrations.csv`, { credentials: "include" });
-@@ -134,7 +137,7 @@ async function deleteMember(member) {
-   if (!authenticated) return <p role="status">Your Microsoft session expired. Redirecting to sign-in…</p>;
-   return <div className="admin-page membership-pilot">
-     <header className="admin-header"><div><p className="eyebrow">DEVELOPMENT FEATURE</p><strong>Membership pilot</strong></div><div className="header-actions"><Badge tone="blue">Stripe test pilot</Badge><a className="secondary-btn" href={registrationUrl} target="_blank" rel="noopener noreferrer">Public registration form</a></div></header>
--    <div className="members-shell"><div className="page-heading"><div><p className="eyebrow">CLUB OPERATIONS</p><h1>Members</h1><p>Manage registrations, subscriptions and payment history.</p></div><div className="heading-actions"><button className="secondary-btn" disabled={loading} onClick={refreshMembers}>{loading ? "Refreshing…" : "Refresh members"}</button><button className="download-btn" onClick={downloadCsv} disabled={exporting}>{exporting ? "Exporting…" : "Export registrations"}</button></div></div>
-+    <div className="members-shell"><div className="page-heading"><div><p className="eyebrow">CLUB OPERATIONS</p><h1>Members</h1><p>Manage registrations, subscriptions and payment history.</p></div><div className="heading-actions"><button className="secondary-btn" disabled={loading} onClick={refreshMembers}>{loading ? "Refreshing…" : "Refresh members"}</button>{canExportFullCsv && <button className="download-btn" onClick={downloadCsv} disabled={exporting}>{exporting ? "Exporting…" : "Full CSV (includes medical)"}</button>}</div></div>
-     {error && <p className="error" role="alert">{error}</p>}
-     <section className="stats-grid" aria-label="Club membership summary">
-       <Metric label="Total members" value={loaded ? members.length : "—"} note="All saved registrations" />
-@@ -185,7 +188,7 @@ function MemberPanel({ registration, onClose, onSessionExpired, onBillingChanged
-   const state = billing(registration);
-   return <div className="modal-backdrop" onClick={onClose}><div ref={panel} className="modal-card" role="dialog" aria-modal="true" aria-labelledby="member-panel-title" onClick={(event) => event.stopPropagation()}>
-     <div className="modal-header"><div><p className="eyebrow">MEMBER PROFILE</p><h2 id="member-panel-title">{name(registration)}</h2><p>{registration.wwfcTeam || "Team not recorded"} · {String(registration.ageGroup).toUpperCase()}</p><Badge tone={state.tone}>{state.label}</Badge></div><button ref={close} className="modal-close" aria-label="Close member details" onClick={onClose}>×</button></div>
--    <div className="member-tabs profile-tabs">{[["payments", "Payments"], ["details", "Member details"], ["consent", "Consent & medical"]].map(([key, label]) => <button key={key} aria-pressed={tab === key} className={tab === key ? "is-active" : ""} onClick={() => setTab(key)}>{label}</button>)}</div>
-+    <div className="member-tabs profile-tabs">{[["payments", "Payments"], ["details", "Member details"], ["consent", "Consent"]].map(([key, label]) => <button key={key} aria-pressed={tab === key} className={tab === key ? "is-active" : ""} onClick={() => setTab(key)}>{label}</button>)}</div>
-     <div hidden={tab !== "payments"}><PaymentHistory registration={registration} onSessionExpired={onSessionExpired} onBillingChanged={onBillingChanged} onInvoicesSynced={onInvoicesSynced} /></div>
-     {tab === "details" && <><ModalSection title="Player details"><Detail label="Team" value={registration.wwfcTeam} /><Detail label="Age group" value={String(registration.ageGroup).toUpperCase()} /><Detail label="Gender" value={registration.playerSex} /><Detail label="Date of birth" value={date(registration.playerDob)} /><Detail label="Registered" value={date(registration.createdAt)} /><Detail label="Registration reference" value={registration.id} /><Detail label="Email" value={registration.email} /><Detail label="Postcode" value={registration.postcode} /><Detail label="House number" value={registration.houseNumber} /></ModalSection>{[registration.emergencyContact1, registration.emergencyContact2].map((contact, index) => <ModalSection key={index} title={`Parent / emergency contact ${index + 1}`}><Detail label="Name" value={contact?.name} /><Detail label="Relationship" value={contact?.relationship} /><Detail label="Phone" value={contact?.phoneNumber} /><Detail label="Email" value={contact?.email} /><Detail label="Date of birth" value={date(contact?.dob)} /><Detail label="Postcode" value={contact?.postcode} /><Detail label="House number" value={contact?.houseNumber} /></ModalSection>)}
-         {(
-@@ -208,7 +211,7 @@ function MemberPanel({ registration, onClose, onSessionExpired, onBillingChanged
-     )}
-   </>
- }
--    {tab === "consent" && <><ModalSection title="Medical information"><Detail label="Medical information" value={registration.medicalInfo} wide /><Detail label="Allergies" value={registration.allergies} wide /></ModalSection><ModalSection title="Permissions"><Detail label="Contact consent" value={registration.consentData ? "Yes" : "No"} /><Detail label="Photo consent" value={registration.consentPhotos ? "Yes" : "No"} /><Detail label="Video consent" value={registration.consentVideos ? "Yes" : "No"} /><Detail label="Walk home alone" value={registration.consentWalkHome == null ? "Not applicable" : registration.consentWalkHome ? "Yes" : "No"} />{registration.acceptedPrivacyPolicy != null && <Detail label="Privacy policy accepted" value={registration.acceptedPrivacyPolicy ? "Yes" : "No"} />}</ModalSection><ModalSection title="Signature"><Detail label="Signed by" value={registration.parentName} /><Detail label="Signature" value={registration.parentSignature} /><Detail label="Signature date" value={date(registration.signatureDate)} /></ModalSection></>}
-+    {tab === "consent" && <><ModalSection title="Permissions"><Detail label="Contact consent" value={registration.consentData ? "Yes" : "No"} /><Detail label="Photo consent" value={registration.consentPhotos ? "Yes" : "No"} /><Detail label="Video consent" value={registration.consentVideos ? "Yes" : "No"} /><Detail label="Walk home alone" value={registration.consentWalkHome == null ? "Not applicable" : registration.consentWalkHome ? "Yes" : "No"} />{registration.acceptedPrivacyPolicy != null && <Detail label="Privacy policy accepted" value={registration.acceptedPrivacyPolicy ? "Yes" : "No"} />}</ModalSection><ModalSection title="Signature"><Detail label="Signed by" value={registration.parentName} /><Detail label="Signature" value={registration.parentSignature} /><Detail label="Signature date" value={date(registration.signatureDate)} /></ModalSection></>}
-   </div></div>;
- }
+diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+index 0460200..0b74a97 100644
+--- a/frontend/src/App.jsx
++++ b/frontend/src/App.jsx
+@@ -92,11 +92,14 @@ const [auth, setAuth] = useState({
+ useEffect(() => {
+   if (!auth.authenticated) return;
+   let cancelled = false;
+-  fetch("/api/membership-pilot/config")
++  const refreshAccess = () => fetch("/api/membership-pilot/config")
+     .then((response) => response.ok ? response.json() : null)
+     .then((data) => { if (!cancelled) setMembershipPilot(data); })
+     .catch(() => { if (!cancelled) setMembershipPilot(null); });
+-  return () => { cancelled = true; };
++  refreshAccess();
++  const timer = setInterval(refreshAccess, 60000);
++  window.addEventListener("focus", refreshAccess);
++  return () => { cancelled = true; clearInterval(timer); window.removeEventListener("focus", refreshAccess); };
+ }, [auth.authenticated]);
  
+ useEffect(() => {
+@@ -452,7 +455,7 @@ if (!auth.authenticated) {
+             Membership pilot
+           </button>
+         )}
+-        {membershipPilot?.available && (
++        {membershipPilot?.volunteersAvailable && (
+           <button className={`nav-item ${currentSection === "club-volunteers" ? "active" : ""}`}
+             onClick={() => { setCurrentSection("club-volunteers"); setMobileMenuOpen(false); }}>
+             Club volunteers
+@@ -565,7 +568,7 @@ if (!auth.authenticated) {
+ 
+       <main className="dashboard-content">
+         {currentSection === "social-media" && membershipPilot?.available && <SocialMedia />}
+-        {currentSection === "club-volunteers" && membershipPilot?.available && (
++        {currentSection === "club-volunteers" && membershipPilot?.volunteersAvailable && (
+           <ClubVolunteers registrationUrl={membershipPilot.registrationUrl} />
+         )}
+         {currentSection === "membership-pilot" && membershipPilot?.available && (
+diff --git a/frontend/src/components/ClubVolunteers.jsx b/frontend/src/components/ClubVolunteers.jsx
+index 0679dbc..c8c319d 100644
+--- a/frontend/src/components/ClubVolunteers.jsx
++++ b/frontend/src/components/ClubVolunteers.jsx
+@@ -112,7 +112,7 @@ function VolunteerPanel({ volunteer, roles, superAdmin, onClose, onSaved }) {
+           <section className="modal-section"><h3>Review & administration</h3><div className="modal-grid volunteer-form-grid">
+             <label>Review status<select disabled={locked || busy} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}><option value="AWAITING_REVIEW">Awaiting review</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></select></label>
+             <label>Volunteer administration access<select disabled={!superAdmin || busy} value={form.accessRole} onChange={(event) => setForm({ ...form, accessRole: event.target.value })}><option value="NONE">None</option><option value="ADMIN">Admin</option><option value="SUPER_ADMIN">Super Admin</option></select></label>
+-          </div><p className="volunteer-hint">{superAdmin ? "You can manage volunteer administration access." : "Only a Super Admin can change administration access."}</p>{locked && <p className="volunteer-hint">A Super Admin must update this volunteer's roles, status or notes.</p>}</section>
++          </div><p className="volunteer-hint">{superAdmin ? "Admin and Super Admin grant volunteer management access only. The volunteer must be Active with current agreements accepted. None grants no access." : "Only a Super Admin can grant administration access. Access requires Active status and current agreements."}</p>{locked && <p className="volunteer-hint">A Super Admin must update this volunteer's roles, status or notes.</p>}</section>
+         </div>
+         <div hidden={tab !== "details"}>
+           <section className="modal-section"><h3>Contact details</h3><div className="modal-grid"><Detail label="Full name">{fullName(volunteer)}</Detail><Detail label="Email address">{volunteer.email}</Detail><Detail label="Telephone">{volunteer.phone}</Detail><Detail label="Team">{volunteer.team}</Detail><Detail label="Registered">{formatDate(volunteer.createdAt)}</Detail><Detail label="Registration reference">{volunteer.id}</Detail></div></section>
 diff --git a/routes/membershipPilot.js b/routes/membershipPilot.js
-index 9875e9f..3fe57bc 100644
+index 3fe57bc..c070994 100644
 --- a/routes/membershipPilot.js
 +++ b/routes/membershipPilot.js
-@@ -32,12 +32,13 @@ function permittedPath(method, path) {
+@@ -18,7 +18,7 @@ function configuration(env) {
+     registrationUrl = publicUrl.href;
+   } catch { backend = null; registrationUrl = null; }
+   const secret = env.TRUDASH_MEMBERSHIP_SHARED_SECRET;
+-  const ready = enabled && admins.length > 0 && backend && registrationUrl && secret && Buffer.byteLength(secret) >= 32;
++  const ready = enabled && backend && registrationUrl && secret && Buffer.byteLength(secret) >= 32;
+   return { enabled, admins, backend, registrationUrl, secret, ready: Boolean(ready) };
+ }
+ function permittedPath(method, path) {
+@@ -32,13 +32,13 @@ function permittedPath(method, path) {
      (method === "POST" && /^\/registrations\/[A-Za-z0-9_-]+\/(invoices\/sync|billing\/cancel|payment-setup)$/.test(path)) ||
      (method === "DELETE" && /^\/registrations\/[A-Za-z0-9_-]+$/.test(path));
  }
--function signAssertion(secret, req, path, volunteerSuperAdmin = false) {
-+function signAssertion(secret, req, path, volunteerSuperAdmin = false, fullCsvExport = false) {
+-function signAssertion(secret, req, path, volunteerSuperAdmin = false, fullCsvExport = false) {
++function signAssertion(secret, req, path, volunteerSuperAdmin = false, fullCsvExport = false, scope = "members") {
    const now = Math.floor(Date.now() / 1000);
    const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
    const payload = Buffer.from(JSON.stringify({
      iss: "trudash", aud: "tcm-membership-admin", sub: req.session.user.username.toLowerCase(),
--    role: "membership_admin", volunteerSuperAdmin, iat: now, exp: now + 30, jti: crypto.randomUUID(),
-+    role: "membership_admin", volunteerSuperAdmin,
-+    fullCsvExport, iat: now, exp: now + 30, jti: crypto.randomUUID(),
+     role: "membership_admin", volunteerSuperAdmin,
+-    fullCsvExport, iat: now, exp: now + 30, jti: crypto.randomUUID(),
++    fullCsvExport, scope, iat: now, exp: now + 30, jti: crypto.randomUUID(),
      method: req.method, path,
      bodyHash: crypto.createHash("sha256").update(JSON.stringify(req.body || null)).digest("hex"),
    })).toString("base64url");
-@@ -72,6 +73,10 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } =
-       try { expectedOrigin = new URL(env.APP_BASE_URL).origin; } catch { return res.status(503).json({ error: "TruDash app URL is not configured" }); }
-       if (req.get("origin") !== expectedOrigin) return res.status(403).json({ error: "Invalid request origin" });
-     }
-+    const fullCsvExport = namedUserAllowed(env.TRUDASH_FULL_CSV_EXPORT_EMAILS, req.session.user.username);
-+    if (req.path === "/registrations.csv" && !fullCsvExport) {
-+      return res.status(403).json({ error: "Full registration export permission required" });
+@@ -56,16 +56,35 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } =
+     if (!req.session?.user) return res.status(401).json({ error: "Microsoft sign-in required" });
+     next();
+   });
+-  router.get("/config", (req, res) => {
++  router.get("/config", async (req, res) => {
+     const config = configuration(env);
+-    const allowed = config.ready && isMembershipAdmin(config.admins, req.session.user.username)
+-    res.json({ enabled: config.enabled, available: Boolean(allowed), registrationUrl: allowed ? config.registrationUrl : null });
++    const memberAllowed = config.ready && isMembershipAdmin(config.admins, req.session.user.username);
++    let volunteersAvailable = false;
++    let volunteerAccessUnavailable = false;
++    if (config.ready) {
++      try {
++        const path = "/api/volunteers/admin/access";
++        const bootstrap = namedUserAllowed(env.VOLUNTEER_SUPER_ADMIN_EMAILS, req.session.user.username);
++        const response = await fetchImpl(`${config.backend}${path}`, {
++          headers: { "x-trudash-assertion": signAssertion(config.secret, req, path, bootstrap, false, "volunteers") },
++          signal: AbortSignal.timeout(8000), redirect: "error",
++        });
++        if (!response.ok) throw new Error("Volunteer permission lookup failed");
++        const access = await response.json();
++        volunteersAvailable = access.available === true;
++      } catch { volunteerAccessUnavailable = true; }
 +    }
-     const upstreamPath = req.path.startsWith("/social-posts")
-       ? `/api/social-media/admin${req.path.slice("/social-posts".length)}`
-       : req.path.startsWith("/volunteers")
-@@ -82,7 +87,7 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } =
++    res.json({ enabled: config.enabled, available: Boolean(memberAllowed),
++      volunteersAvailable, volunteerAccessUnavailable,
++      registrationUrl: memberAllowed || volunteersAvailable ? config.registrationUrl : null });
+   });
+   router.use(async (req, res) => {
+     const config = configuration(env);
+     if (!config.enabled) return res.status(404).json({ error: "Membership pilot is disabled" });
+     if (!config.ready) return res.status(503).json({ error: "Membership pilot is not configured" });
+-    if (!isMembershipAdmin(config.admins, req.session.user.username)) return res.status(403).json({ error: "Membership administrator access required" });
++    const isVolunteerPath = req.path === "/volunteers" || req.path.startsWith("/volunteers/");
++    const scope = isVolunteerPath ? "volunteers" : req.path.startsWith("/social-posts") ? "social" : "members";
++    if (!isVolunteerPath && !isMembershipAdmin(config.admins, req.session.user.username)) return res.status(403).json({ error: "Membership administrator access required" });
+     if (!permittedPath(req.method, req.path) || req.url.includes("?")) return res.status(404).json({ error: "Unknown membership action" });
+     if (!["GET", "HEAD"].includes(req.method)) {
+       // Cookie-based Microsoft sessions must not authorize cross-site mutations.
+@@ -87,7 +106,7 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } =
      try {
        const response = await fetchImpl(`${config.backend}${upstreamPath}`, {
          method: req.method,
--        headers: { "Content-Type": "application/json", "x-trudash-assertion": signAssertion(config.secret, req, upstreamPath, volunteerSuperAdmin) },
-+        headers: { "Content-Type": "application/json", "x-trudash-assertion": signAssertion(config.secret, req, upstreamPath, volunteerSuperAdmin, fullCsvExport) },
+-        headers: { "Content-Type": "application/json", "x-trudash-assertion": signAssertion(config.secret, req, upstreamPath, volunteerSuperAdmin, fullCsvExport) },
++        headers: { "Content-Type": "application/json", "x-trudash-assertion": signAssertion(config.secret, req, upstreamPath, volunteerSuperAdmin, fullCsvExport, scope) },
          ...(["GET", "HEAD"].includes(req.method) ? {} : { body: JSON.stringify(req.body || null) }),
          signal: AbortSignal.timeout(30000), redirect: "error",
        });
-diff --git a/tests/membershipAccess.test.cjs b/tests/membershipAccess.test.cjs
+diff --git a/tests/collectionEndpoint.test.cjs b/tests/collectionEndpoint.test.cjs
 new file mode 100644
-index 0000000..950ed98
+index 0000000..d62e7dc
 --- /dev/null
-+++ b/tests/membershipAccess.test.cjs
-@@ -0,0 +1,39 @@
++++ b/tests/collectionEndpoint.test.cjs
+@@ -0,0 +1,41 @@
 +const test = require('node:test');
 +const assert = require('node:assert/strict');
++const vm = require('node:vm');
++const fs = require('node:fs');
++const path = require('node:path');
++const http = require('node:http');
 +const express = require('express');
-+const { createMembershipPilotRouter } = require('../routes/membershipPilot');
-+async function scenario(t, admins, username, exportEmails = "") {
-+ let calls = 0; let assertion;
-+ const app = express(); app.use(express.json());
-+ app.use((req,res,next) => { req.session = username ? {user:{username}} : {}; next(); });
-+ app.use('/api/membership-pilot', createMembershipPilotRouter({env:{NODE_ENV:'production', MEMBERSHIP_PILOT_ENABLED:'true', MEMBERSHIP_PILOT_ADMIN_EMAILS:admins,TRUDASH_FULL_CSV_EXPORT_EMAILS:exportEmails,TCM_BACKEND_URL:'https://tcm.example',TCM_REGISTRATION_URL:'https://register.example',TRUDASH_MEMBERSHIP_SHARED_SECRET:'x'.repeat(40),APP_BASE_URL:'https://trudash.example'},fetchImpl:async(url,options)=>{assertion=options.headers["x-trudash-assertion"];calls++;return new Response(JSON.stringify({members:[]}),{headers:{'Content-Type':'application/json'}})}}));
-+ const server = await new Promise(resolve => {const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
++const privacy = require('../services/privacyAccess');
++test('real collection endpoint restricts personal arrears to named finance users', async t => {
++ let app;
++ const input = {totalOverdue:84,months:[],overdueMembers:[{firstName:'Private',lastName:'Child',amountDue:21,clubOverdue:21}]};
++ const env={TRUDASH_FINANCE_ADMIN_EMAILS:'treasurer@wwfc.org.uk'};
++ const source=fs.readFileSync(path.join(__dirname,'../server.js'),'utf8');
++ vm.runInNewContext(source,{
++  __dirname:path.join(__dirname,'..'),process:{env},console:{log(){},error(){}},Buffer,URL,Promise,
++  require(name){
++   if(name==='dotenv')return {config(){}};
++   if(name==='express'){
++    const factory=()=>{app=express();app.listen=()=>{};return app;};
++    factory.json=express.json;factory.static=express.static;return factory;
++   }
++   if(name==='express-session')return ()=> (req,res,next)=>{req.session=req.headers['x-test-user']?{user:{username:req.headers['x-test-user']}}:{};next();};
++   if(name==='./services/sharepointService')return {getTeamFeePayCollectionSummary:async()=>input};
++   if(name==='./services/privacyAccess')return privacy;
++   if(name==='./services/loginFlow')return require('../services/loginFlow');
++   if(name==='./services/authService')return {};
++   if(name==='./routes/membershipPilot')return {createMembershipPilotRouter:()=>express.Router()};
++   return require(name);
++  }
++ });
++ const server=http.createServer(app);await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 + t.after(()=>new Promise(resolve=>server.close(resolve)));
-+ return {url:`http://127.0.0.1:${server.address().port}/api/membership-pilot`,calls:()=>calls, assertion:()=>assertion};
-+}
-+test('domain wildcard never exposes directory or CSV or volunteer records',async t=>{
-+ const s=await scenario(t,'@wwfc.org.uk','coach@wwfc.org.uk');
-+ assert.equal((await (await fetch(s.url+'/config')).json()).available,false);
-+ for(const path of ['/members','/registrations.csv','/volunteers'])assert.equal((await fetch(s.url+path)).status,403);
-+ assert.equal(s.calls(),0);
++ const url=`http://127.0.0.1:${server.address().port}/api/members/collections`;
++ const ordinary=await fetch(url,{headers:{'x-test-user':'magic@wwfc.org.uk'}});
++ assert.equal(ordinary.status,200);assert.equal(ordinary.headers.get('cache-control'),'no-store');
++ const summary=await ordinary.json();assert.equal(summary.totalOverdue,84);assert.equal(summary.canViewOverdueDetails,false);assert.equal('overdueMembers' in summary,false);
++ const finance=await (await fetch(url,{headers:{'x-test-user':'treasurer@wwfc.org.uk'}})).json();assert.equal(finance.overdueMembers[0].firstName,'Private');
++ env.TRUDASH_FINANCE_ADMIN_EMAILS='@wwfc.org.uk';
++ assert.equal('overdueMembers' in await (await fetch(url,{headers:{'x-test-user':'magic@wwfc.org.uk'}})).json(),false);
++ assert.equal((await fetch(url)).status,401);
 +});
-+test('named administrator can read while anonymous users cannot',async t=>{
-+ const named=await scenario(t,'admin@wwfc.org.uk','admin@wwfc.org.uk');
-+ const response=await fetch(named.url+'/members');assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');assert.equal(named.calls(),1);
-+ const anonymous=await scenario(t,'admin@wwfc.org.uk',null);assert.equal((await fetch(anonymous.url+'/members')).status,401);assert.equal(anonymous.calls(),0);
+diff --git a/tests/privacyAccess.test.cjs b/tests/privacyAccess.test.cjs
+new file mode 100644
+index 0000000..27d97b4
+--- /dev/null
++++ b/tests/privacyAccess.test.cjs
+@@ -0,0 +1,54 @@
++const test = require('node:test');
++const assert = require('node:assert/strict');
++const { namedUserAllowed, agreementAnalytics, complaintAnalytics } = require('../services/privacyAccess');
++test('personal access requires explicit matching email, never domain wildcard', () => {
++  assert.equal(namedUserAllowed('@wwfc.org.uk', 'coach@wwfc.org.uk'), false);
++  assert.equal(namedUserAllowed('chair@wwfc.org.uk, secretary@wwfc.org.uk', ' COACH@wwfc.org.uk '), false);
++  assert.equal(namedUserAllowed('chair@wwfc.org.uk, secretary@wwfc.org.uk', ' Chair@wwfc.org.uk '), true);
++  assert.equal(namedUserAllowed('', ''), false);
++  assert.equal(namedUserAllowed('chair@wwfc.org.uk', 'chair@wwfc.org.uk.evil'), false);
 +});
-+test('cross-origin mutations are rejected before forwarding',async t=>{
-+ const s=await scenario(t,'admin@wwfc.org.uk','admin@wwfc.org.uk');
-+ assert.equal((await fetch(s.url+'/registrations/member1/billing/cancel',{method:'POST',headers:{Origin:'https://attacker.example'}})).status,403);assert.equal(s.calls(),0);
++test('agreement response excludes member identities and future extra fields', () => {
++  const output = agreementAnalytics({ source: {fileName:'sensitive.xlsx',lastModifiedDateTime:'2026-10-14'}, agreements:[{documentName:'Agreement',version:'1',signed:10,pending:2,total:12,completionPercentage:83,pendingMembers:[{firstName:'Child'}],email:'private'}] });
++  assert.deepEqual(output, {source:{lastModifiedDateTime:'2026-10-14'},agreements:[{documentName:'Agreement',version:'1',signed:10,pending:2,total:12,completionPercentage:83}]});
++});
++test('complaint summary excludes linked case references and staff identities', () => {
++ assert.deepEqual(complaintAnalytics({openComplaints:2,cases:[{caseRef:'C1',caseOwner:'Person'}]}),{openComplaints:2,detailsRestricted:true});
++});
++const { createLoginAttempt, consumeLoginAttempt } = require('../services/loginFlow');
++test('login state is tied to the initiating session, expires and is consumed once', () => {
++ const attempt = createLoginAttempt(1000);
++ assert.notEqual(attempt.state, attempt.nonce);
++ assert.notEqual(attempt.state, createLoginAttempt(1000).state);
++ const session = {loginAttempt:attempt};
++ assert.equal(consumeLoginAttempt(session, attempt.state, 1001), attempt);
++ assert.equal(consumeLoginAttempt(session, attempt.state, 1001), null);
++ assert.equal(consumeLoginAttempt({loginAttempt:attempt}, 'attacker',1001),null);
++ assert.equal(consumeLoginAttempt({loginAttempt:attempt}, attempt.state,attempt.expiresAt),null);
++ assert.equal(consumeLoginAttempt({}, attempt.state,1001),null);
 +});
 +
-+test('full CSV permission is separate from pilot administrator access and is signed',async t=>{
-+ const denied=await scenario(t,'admin@wwfc.org.uk','admin@wwfc.org.uk');
-+ assert.equal((await fetch(denied.url+'/registrations.csv')).status,403);assert.equal(denied.calls(),0);
-+ const allowed=await scenario(t,'admin@wwfc.org.uk','admin@wwfc.org.uk','admin@wwfc.org.uk');
-+ assert.equal((await fetch(allowed.url+'/registrations.csv')).status,200);
-+ const claims=JSON.parse(Buffer.from(allowed.assertion().split('.')[1],'base64url').toString());
-+ assert.equal(claims.fullCsvExport,true);assert.equal(claims.path,'/api/admin/registrations.csv');
-+ const domain=await scenario(t,'admin@wwfc.org.uk','admin@wwfc.org.uk','@wwfc.org.uk');
-+ assert.equal((await fetch(domain.url+'/registrations.csv')).status,403);assert.equal(domain.calls(),0);
++test('Microsoft code exchange receives the same expected nonce as sign-in', () => {
++ const fs = require('node:fs');
++ const vm = require('node:vm');
++ const source = fs.readFileSync(require('node:path').join(__dirname, '../server.js'), 'utf8');
++ const match = source.match(/acquireTokenByCode\((\{[\s\S]*?\})\);/);
++ assert.ok(match, 'code exchange exists');
++ const request = vm.runInNewContext('(' + match[1] + ')', {req:{query:{code:'code'}},authCodeUrlParameters:{scopes:['openid']},redirectUri:'https://example.org/auth/redirect',attempt:{nonce:'expected-nonce'}});
++ assert.equal(request.nonce, 'expected-nonce');
++ assert.equal(request.code, 'code');
 +});
++const { collectionResponse } = require('../services/privacyAccess');
++test('ordinary collection response excludes identities, individual debts and unexpected nested fields', () => {
++ const input={totalOverdue:84,overdueMembers:[{firstName:'Child',lastName:'Private',teams:'U13',amountDue:21,clubOverdue:21,status:'overdue',email:'secret'}],unexpected:'private',months:[{month:'2026-10',collections:4,members:[{name:'Private'}]}]};
++ const output=collectionResponse(input);
++ assert.equal(output.totalOverdue,84);
++ assert.equal(output.canViewOverdueDetails,false);
++ assert.equal(Object.hasOwn(output,'overdueMembers'),false);
++ assert.equal(Object.hasOwn(output,'unexpected'),false);
++ assert.equal(Object.hasOwn(output.months[0],'members'),false);
++ assert.equal(JSON.stringify(output).includes('Private'),false);
++ const finance=collectionResponse(input,true);
++ assert.equal(finance.overdueMembers[0].firstName,'Child');
++ assert.equal(Object.hasOwn(finance.overdueMembers[0],'email'),false);
++});
+diff --git a/tests/roleSplit.test.cjs b/tests/roleSplit.test.cjs
+new file mode 100644
+index 0000000..aacf92e
+--- /dev/null
++++ b/tests/roleSplit.test.cjs
+@@ -0,0 +1,50 @@
++const test=require('node:test');
++const assert=require('node:assert/strict');
++const fs=require('node:fs');
++const vm=require('node:vm');
++const path=require('node:path');
++const {createRequire}=require('node:module');
++const express=require('express');
++const crypto=require('node:crypto');
++const {createMembershipPilotRouter}=require('../routes/membershipPilot');
++// Cross-repository integration: override only the checkout location locally.
++const tcm=process.env.TCM_TEST_ROOT || path.resolve(__dirname,'../../TotalClubManagement');
++const backendRequire=createRequire(path.join(tcm,'backend/package.json'));
++const jwt=backendRequire('jsonwebtoken');
++const secret='test-only-role-split-'.repeat(4);
++process.env.TRUDASH_MEMBERSHIP_SHARED_SECRET=secret;
++process.env.TRUDASH_ONLY_ADMIN_AUTH='true';
++process.env.FRONTEND_URL='https://register.example';
++function load(relative,dependencies){const mod={exports:{}};vm.runInNewContext(fs.readFileSync(path.join(tcm,relative),'utf8'),{module:mod,exports:mod.exports,require:name=> name in dependencies?dependencies[name]:backendRequire(name),process,console:{error(){}},Buffer,URL,Date,Map});return mod.exports;}
++async function fixture(t){
++ const people=new Map();let reads=0;const changes=[];
++ const db={clubVolunteer:{findUnique:async({where})=>[...people.values()].find(v=>where.email?v.email===where.email:v.id===where.id)||null,findMany:async()=>{reads++;return [...people.values()]},update:async({where,data})=>{const v=people.get(where.id);Object.assign(v,data);return v;}},volunteerChange:{create:async args=>changes.push(args)}};
++ db.$transaction=async fn=>fn(db);
++ const service=load('backend/src/services/volunteerService.js',{'../prisma':db,'../content/volunteerAgreements.json':JSON.parse(fs.readFileSync(path.join(tcm,'backend/src/content/volunteerAgreements.json')))});
++ function person(id,accessRole='NONE',status='ACTIVE',accepted=true){const v={id,email:id+'@wwfc.org.uk',firstName:id,lastName:'Test',phone:'01234567890',team:null,assignedRoles:['Trustee'],requestedRoles:['Trustee'],status,accessRole,notes:'',createdAt:new Date(),updatedAt:new Date(),acceptances:accepted?service.agreements().filter(d=>d.key==='VOLUNTEER').map(d=>({agreement:d.key,version:d.version,content:d.content,acceptedAt:new Date()})):[]};people.set(id,v);return v;}
++ person('member');person('admin','ADMIN');person('super','SUPER_ADMIN');person('none');person('inactive','ADMIN','INACTIVE');person('unsigned','ADMIN','ACTIVE',false);person('target');
++ const verify=backendRequire(path.join(tcm,'backend/src/middleware/trudashAdmin'));
++ const volunteers=load('backend/src/routes/volunteers.js',{'../services/volunteerService':service,'../middleware/trudashAdmin':verify});
++ const app=express();app.use(express.json());app.use('/api/volunteers',volunteers);
++ // Real bridge verifier also enforces the member scope, without querying member data.
++ app.get('/api/admin/members',(req,res)=>{if(verify.verifyTrudashAdmin(req,res))res.json({members:[{id:'member1'}]});});
++ const backend=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
++ t.after(()=>new Promise(resolve=>backend.close(resolve)));
++ const bridge=express();bridge.use(express.json());bridge.use((req,res,next)=>{req.session={user:{username:req.get('x-test-user')||'none@wwfc.org.uk'}};next();});
++ const env={MEMBERSHIP_PILOT_ENABLED:'true',MEMBERSHIP_PILOT_ADMIN_EMAILS:'member@wwfc.org.uk',TCM_BACKEND_URL:`http://127.0.0.1:${backend.address().port}`,TCM_REGISTRATION_URL:'https://register.example',TRUDASH_MEMBERSHIP_SHARED_SECRET:secret,VOLUNTEER_SUPER_ADMIN_EMAILS:'bootstrap@wwfc.org.uk',APP_BASE_URL:'https://trudash.example'};
++ bridge.use('/api/membership-pilot',createMembershipPilotRouter({env}));
++ const server=await new Promise(resolve=>{const s=bridge.listen(0,'127.0.0.1',()=>resolve(s));});t.after(()=>new Promise(resolve=>server.close(resolve)));
++ const root=`http://127.0.0.1:${server.address().port}/api/membership-pilot`;
++ async function call(user,route='/volunteers',method='GET',data){return fetch(root+route,{method,headers:{'x-test-user':user+'@wwfc.org.uk',Origin:env.APP_BASE_URL,'Content-Type':'application/json'},...(data?{body:JSON.stringify(data)}:{})});}
++ return {call,people,person,env,db,reads:()=>reads,changes,backendUrl:`http://127.0.0.1:${backend.address().port}`};
++}
++test('member admin has members but no volunteer directory or volunteer menu',async t=>{const f=await fixture(t);assert.equal((await f.call('member','/members')).status,200);assert.equal((await f.call('member')).status,403);assert.equal(f.reads(),0);const c=await(await f.call('member','/config')).json();assert.equal(c.available,true);assert.equal(c.volunteersAvailable,false);});
++test('volunteer admin and super admin have directory without member permission',async t=>{const f=await fixture(t);for(const user of ['admin','super','bootstrap']){const c=await(await f.call(user,'/config')).json();assert.equal(c.available,false);assert.equal(c.volunteersAvailable,true);assert.equal((await f.call(user)).status,200);assert.equal((await f.call(user,'/members')).status,403);}const data=await(await f.call('admin')).json();assert.equal(data.superAdmin,false);assert.equal((await(await f.call('bootstrap')).json()).superAdmin,true);});
++test('none, inactive and missing agreements fail closed before directory queries',async t=>{const f=await fixture(t);for(const user of ['none','inactive','unsigned']){assert.equal((await f.call(user)).status,403);assert.equal((await(await f.call(user,'/config')).json()).volunteersAvailable,false);}assert.equal(f.reads(),0);});
++test('revocation takes effect on next request, without signing out',async t=>{const f=await fixture(t);assert.equal((await f.call('admin')).status,200);f.people.get('admin').accessRole='NONE';assert.equal((await f.call('admin')).status,403);});
++test('admin cannot grant access or edit super admin; super admin can grant then revoke',async t=>{const f=await fixture(t);const v=f.people.get('target');const update={updatedAt:v.updatedAt.toISOString(),assignedRoles:['Trustee'],status:'ACTIVE',notes:'',accessRole:'ADMIN'};assert.equal((await f.call('admin','/volunteers/target','PATCH',update)).status,403);assert.equal(v.accessRole,'NONE');assert.equal((await f.call('super','/volunteers/target','PATCH',update)).status,200);assert.equal((await f.call('target')).status,200);assert.equal((await f.call('super','/volunteers/target','PATCH',{...update,accessRole:'NONE'})).status,200);assert.equal((await f.call('target')).status,403);assert.equal(f.changes.length,2);const s=f.people.get('super');assert.equal((await f.call('admin','/volunteers/super','PATCH',{...update,updatedAt:s.updatedAt.toISOString(),accessRole:'SUPER_ADMIN'})).status,403);assert.equal((await f.call('admin','/volunteers/super/acceptance-link','POST',{})).status,403);});
++test('signed volunteer assertion cannot be reused as member authority',async t=>{const f=await fixture(t);const route='/api/admin/members';const token=jwt.sign({sub:'admin@wwfc.org.uk',role:'membership_admin',scope:'volunteers',method:'GET',path:route,bodyHash:crypto.createHash('sha256').update('null').digest('hex'),jti:crypto.randomUUID()},secret,{issuer:'trudash',audience:'tcm-membership-admin',expiresIn:30});assert.equal((await fetch(f.backendUrl+route,{headers:{'x-trudash-assertion':token}})).status,401);});
++
++test('volunteer bootstrap works even without any member administrator list',async t=>{const f=await fixture(t);f.env.MEMBERSHIP_PILOT_ADMIN_EMAILS='';const config=await(await f.call('bootstrap','/config')).json();assert.equal(config.volunteersAvailable,true);assert.equal(config.available,false);assert.equal((await f.call('bootstrap')).status,200);assert.equal((await f.call('bootstrap','/members')).status,403);});
++test('permission lookup failure does not grant volunteer access or hide valid member access',async t=>{const f=await fixture(t);f.db.clubVolunteer.findUnique=async()=>{throw Error('database unavailable')};const config=await(await f.call('member','/config')).json();assert.equal(config.available,true);assert.equal(config.volunteersAvailable,false);assert.equal(config.volunteerAccessUnavailable,true);assert.equal((await f.call('admin')).status,503);assert.equal(f.reads(),0);});
++test('None cannot mutate roles or generate acceptance links directly',async t=>{const f=await fixture(t);assert.equal((await f.call('none','/volunteers/target','PATCH',{})).status,403);assert.equal((await f.call('none','/volunteers/target/acceptance-link','POST',{})).status,403);assert.equal(f.changes.length,0);});

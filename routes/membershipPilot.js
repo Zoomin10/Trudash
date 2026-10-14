@@ -18,7 +18,7 @@ function configuration(env) {
     registrationUrl = publicUrl.href;
   } catch { backend = null; registrationUrl = null; }
   const secret = env.TRUDASH_MEMBERSHIP_SHARED_SECRET;
-  const ready = enabled && admins.length > 0 && backend && registrationUrl && secret && Buffer.byteLength(secret) >= 32;
+  const ready = enabled && backend && registrationUrl && secret && Buffer.byteLength(secret) >= 32;
   return { enabled, admins, backend, registrationUrl, secret, ready: Boolean(ready) };
 }
 function permittedPath(method, path) {
@@ -32,13 +32,13 @@ function permittedPath(method, path) {
     (method === "POST" && /^\/registrations\/[A-Za-z0-9_-]+\/(invoices\/sync|billing\/cancel|payment-setup)$/.test(path)) ||
     (method === "DELETE" && /^\/registrations\/[A-Za-z0-9_-]+$/.test(path));
 }
-function signAssertion(secret, req, path, volunteerSuperAdmin = false, fullCsvExport = false) {
+function signAssertion(secret, req, path, volunteerSuperAdmin = false, fullCsvExport = false, scope = "members") {
   const now = Math.floor(Date.now() / 1000);
   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
   const payload = Buffer.from(JSON.stringify({
     iss: "trudash", aud: "tcm-membership-admin", sub: req.session.user.username.toLowerCase(),
     role: "membership_admin", volunteerSuperAdmin,
-    fullCsvExport, iat: now, exp: now + 30, jti: crypto.randomUUID(),
+    fullCsvExport, scope, iat: now, exp: now + 30, jti: crypto.randomUUID(),
     method: req.method, path,
     bodyHash: crypto.createHash("sha256").update(JSON.stringify(req.body || null)).digest("hex"),
   })).toString("base64url");
@@ -56,16 +56,35 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } = 
     if (!req.session?.user) return res.status(401).json({ error: "Microsoft sign-in required" });
     next();
   });
-  router.get("/config", (req, res) => {
+  router.get("/config", async (req, res) => {
     const config = configuration(env);
-    const allowed = config.ready && isMembershipAdmin(config.admins, req.session.user.username)
-    res.json({ enabled: config.enabled, available: Boolean(allowed), registrationUrl: allowed ? config.registrationUrl : null });
+    const memberAllowed = config.ready && isMembershipAdmin(config.admins, req.session.user.username);
+    let volunteersAvailable = false;
+    let volunteerAccessUnavailable = false;
+    if (config.ready) {
+      try {
+        const path = "/api/volunteers/admin/access";
+        const bootstrap = namedUserAllowed(env.VOLUNTEER_SUPER_ADMIN_EMAILS, req.session.user.username);
+        const response = await fetchImpl(`${config.backend}${path}`, {
+          headers: { "x-trudash-assertion": signAssertion(config.secret, req, path, bootstrap, false, "volunteers") },
+          signal: AbortSignal.timeout(8000), redirect: "error",
+        });
+        if (!response.ok) throw new Error("Volunteer permission lookup failed");
+        const access = await response.json();
+        volunteersAvailable = access.available === true;
+      } catch { volunteerAccessUnavailable = true; }
+    }
+    res.json({ enabled: config.enabled, available: Boolean(memberAllowed),
+      volunteersAvailable, volunteerAccessUnavailable,
+      registrationUrl: memberAllowed || volunteersAvailable ? config.registrationUrl : null });
   });
   router.use(async (req, res) => {
     const config = configuration(env);
     if (!config.enabled) return res.status(404).json({ error: "Membership pilot is disabled" });
     if (!config.ready) return res.status(503).json({ error: "Membership pilot is not configured" });
-    if (!isMembershipAdmin(config.admins, req.session.user.username)) return res.status(403).json({ error: "Membership administrator access required" });
+    const isVolunteerPath = req.path === "/volunteers" || req.path.startsWith("/volunteers/");
+    const scope = isVolunteerPath ? "volunteers" : req.path.startsWith("/social-posts") ? "social" : "members";
+    if (!isVolunteerPath && !isMembershipAdmin(config.admins, req.session.user.username)) return res.status(403).json({ error: "Membership administrator access required" });
     if (!permittedPath(req.method, req.path) || req.url.includes("?")) return res.status(404).json({ error: "Unknown membership action" });
     if (!["GET", "HEAD"].includes(req.method)) {
       // Cookie-based Microsoft sessions must not authorize cross-site mutations.
@@ -87,7 +106,7 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } = 
     try {
       const response = await fetchImpl(`${config.backend}${upstreamPath}`, {
         method: req.method,
-        headers: { "Content-Type": "application/json", "x-trudash-assertion": signAssertion(config.secret, req, upstreamPath, volunteerSuperAdmin, fullCsvExport) },
+        headers: { "Content-Type": "application/json", "x-trudash-assertion": signAssertion(config.secret, req, upstreamPath, volunteerSuperAdmin, fullCsvExport, scope) },
         ...(["GET", "HEAD"].includes(req.method) ? {} : { body: JSON.stringify(req.body || null) }),
         signal: AbortSignal.timeout(30000), redirect: "error",
       });

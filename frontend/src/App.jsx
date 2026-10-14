@@ -92,11 +92,14 @@ const [auth, setAuth] = useState({
 useEffect(() => {
   if (!auth.authenticated) return;
   let cancelled = false;
-  fetch("/api/membership-pilot/config")
+  const refreshAccess = () => fetch("/api/membership-pilot/config")
     .then((response) => response.ok ? response.json() : null)
     .then((data) => { if (!cancelled) setMembershipPilot(data); })
     .catch(() => { if (!cancelled) setMembershipPilot(null); });
-  return () => { cancelled = true; };
+  refreshAccess();
+  const timer = setInterval(refreshAccess, 60000);
+  window.addEventListener("focus", refreshAccess);
+  return () => { cancelled = true; clearInterval(timer); window.removeEventListener("focus", refreshAccess); };
 }, [auth.authenticated]);
 
 useEffect(() => {
@@ -452,7 +455,7 @@ if (!auth.authenticated) {
             Membership pilot
           </button>
         )}
-        {membershipPilot?.available && (
+        {membershipPilot?.volunteersAvailable && (
           <button className={`nav-item ${currentSection === "club-volunteers" ? "active" : ""}`}
             onClick={() => { setCurrentSection("club-volunteers"); setMobileMenuOpen(false); }}>
             Club volunteers
@@ -565,7 +568,7 @@ if (!auth.authenticated) {
 
       <main className="dashboard-content">
         {currentSection === "social-media" && membershipPilot?.available && <SocialMedia />}
-        {currentSection === "club-volunteers" && membershipPilot?.available && (
+        {currentSection === "club-volunteers" && membershipPilot?.volunteersAvailable && (
           <ClubVolunteers registrationUrl={membershipPilot.registrationUrl} />
         )}
         {currentSection === "membership-pilot" && membershipPilot?.available && (
