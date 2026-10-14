@@ -1,0 +1,348 @@
+diff --git a/GDPR_PHASE1.md b/GDPR_PHASE1.md
+new file mode 100644
+index 0000000..abc465a
+--- /dev/null
++++ b/GDPR_PHASE1.md
+@@ -0,0 +1,43 @@
++# TruDash privacy controls phase 1
++
++Based on production main commit 35c8939e08edb6c6c681a907312c62ffff8f0c76, reviewed 14 October 2026. This is a reviewed code change for Development deployment first; it is not a GDPR compliance certification. No database migration or new dependency is needed. No production settings were read or changed.
++
++## Changes
++
++- Microsoft sign-in uses a session-bound, ten-minute state and nonce, consumes the attempt before code redemption, and regenerates the authenticated session ID. Logs no longer print the successful user's email.
++- API responses use Cache-Control no-store.
++- Agreement analytics use an explicit response allow-list, excluding pending members' names, team memberships and source filenames. The UI directs individual follow-up to TeamFeePay.
++- Complaint records (case reference, owner, review and status) are returned only to named welfare users. Other authenticated users receive the open count and a restricted-details indicator.
++- Direct TFP report listings and their source links require named report administrators.
++- Membership pilot access accepts explicit email addresses only. A domain-only entry no longer authorises member, volunteer, invoice or CSV access. This intentionally restricts the existing broad pilot rather than pretending a member-directory response is anonymous.
++
++## TruDash Railway configuration
++
++Set these in Development before testing, then independently in Production when releasing:
++
++MEMBERSHIP_PILOT_ADMIN_EMAILS=approved-person@wwfc.org.uk,another-approved-person@wwfc.org.uk
++TRUDASH_WELFARE_ADMIN_EMAILS=approved-welfare-person@wwfc.org.uk
++TRUDASH_REPORT_ADMIN_EMAILS=approved-report-person@wwfc.org.uk
++
++The example addresses are placeholders. Use actual Microsoft login usernames approved for each responsibility, not display names, role titles, or @wwfc.org.uk. An empty welfare or report setting denies detailed access. Leaving MEMBERSHIP_PILOT_ADMIN_EMAILS as @wwfc.org.uk hides the pilot and volunteer tabs for everyone. Named pilot administrators still have broad access to the existing personal member and volunteer records; give that setting only to people authorised for that scope. Super Admin bootstrap emails must also be named in the pilot list. Keep all other existing integration settings unchanged.
++
++On TCM, confirm TRUDASH_ONLY_ADMIN_AUTH=true if Microsoft sign-in is intended to be the only administrative login. Otherwise the separate shared-password login remains usable; this patch does not remove it.
++
++## Apply and verify
++
++Copy the supplied application files over the matching paths in the TruDash repository, or apply the patch at the repository root with git apply --check then git apply. Do not use both methods. Keep tests in the repository's tests folder. Preserve later edits if main has changed since the base commit.
++
++Run node --test tests/*.test.cjs and npm --prefix frontend run build after installing locked dependencies with npm ci and npm --prefix frontend ci. Seven tests passed and the Vite production build passed in this review. No live Entra, Railway, SharePoint or Stripe actions were performed.
++
++Deploy Development. Start sign-in afresh after deployment. Check successful Microsoft sign-in and logout; reject an invalid/expired callback; check a named pilot administrator, a normal WWFC user and a welfare user. Inspect Network JSON to confirm agreement names/member details are absent, complaint details are restricted and source reports return 403 unless explicitly approved. A normal user should retain ordinary aggregate dashboards. Check the named pilot administrator can still use existing member/volunteer tools. Test Production only after those checks pass. To roll back, revert this patch and restore the previous environment values, recognising that doing so restores the older broad-access behaviour.
++
++## Remaining work identified in current main
++
++1. Split member finance, medical, volunteer administration and coach/team access at both the TruDash bridge and TCM backend. The existing volunteer None/Admin/Super Admin labels do not authorise ordinary directory access; this phase restricts that directory to the named pilot list but does not redefine the labels. Do not add ordinary coaches to the broad list to give them only squad medical access.
++2. Review Microsoft Entra tenant, app assignment, MFA/Conditional Access and Graph application permissions. SharePoint data is fetched using the app's identity, not each viewer's own SharePoint permissions. Browser authentication alone cannot establish equivalent SharePoint access. No tenant configuration was inspected.
++3. Replace express-session's default in-memory store for production and establish session revocation and appropriate expiry. Add durable access/audit records with a justified retention schedule.
++4. Assess small-cohort and combined-report identification risk before distributing gender/team/payment/agreement/complaint aggregates widely. Counts are not automatically anonymous; this patch does not certify them as anonymous or suppress small cells.
++5. Set and implement export, source-record, volunteer acceptance, audit and backup retention; rights-request and incident procedures; supplier contracts and actual Railway hosting/transfer arrangements.
++6. Review public signup consent, test data, rate limiting, application/error logging and third-party embeds. The main membership directory still includes health and contact data for authorised full administrators.
++
++The updated policy documents describe the intended controls; code, tenant settings and operational procedures must all match before production approval.
+diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+index 0bc2054..a2979dc 100644
+--- a/frontend/src/App.jsx
++++ b/frontend/src/App.jsx
+@@ -1543,7 +1543,7 @@ if (!auth.authenticated) {
+     >
+       <div className="agreement-modal-header">
+         <div>
+-          <h3>Pending Members</h3>
++          <h3>Agreement acceptance summary</h3>
+           <p>{selectedAgreement.documentName}</p>
+         </div>
+ 
+@@ -1563,20 +1563,7 @@ if (!auth.authenticated) {
+       </div>
+ 
+       <div className="agreement-member-list">
+-        {selectedAgreement.pendingMembers?.map((member, index) => (
+-          <div
+-            className="agreement-member-row"
+-            key={`${member.firstName}-${member.lastName}-${index}`}
+-          >
+-            <span className="agreement-member-name">
+-              {member.firstName} {member.lastName}
+-            </span>
+-
+-            <span className="agreement-member-team">
+-              {member.teams || "—"}
+-            </span>
+-          </div>
+-        ))}
++        <p>Individual follow-up records are available to authorised administrators in TeamFeePay.</p>
+       </div>
+     </div>
+   </div>
+@@ -1661,7 +1648,9 @@ if (!auth.authenticated) {
+         </div>
+       ) : (
+         <p className="empty-state">
+-          No open complaints.
++          {complaintsSummary?.detailsRestricted
++            ? "Individual complaint records are restricted to authorised welfare users."
++            : "No open complaints."}
+         </p>
+       )}
+     </div>
+diff --git a/routes/membershipPilot.js b/routes/membershipPilot.js
+index a981e4d..9875e9f 100644
+--- a/routes/membershipPilot.js
++++ b/routes/membershipPilot.js
+@@ -1,5 +1,6 @@
+ const express = require("express");
+ const crypto = require("crypto");
++const { namedUserAllowed } = require("../services/privacyAccess");
+ 
+ function configuration(env) {
+   const enabled = env.MEMBERSHIP_PILOT_ENABLED === "true";
+@@ -44,16 +45,7 @@ function signAssertion(secret, req, path, volunteerSuperAdmin = false) {
+   return `${header}.${payload}.${signature}`;
+ }
+ function isMembershipAdmin(admins, username) {
+-  const email = String(username || "").trim().toLowerCase();
+-  const parts = email.split("@");
+-
+-  if (parts.length !== 2 || !parts[0] || !parts[1]) return false;
+-
+-  return admins.some((entry) =>
+-    entry.startsWith("@")
+-      ? parts[1] === entry.slice(1)
+-      : email === entry
+-  );
++  return namedUserAllowed(admins.join(","), username);
+ }
+ 
+ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } = {}) {
+diff --git a/server.js b/server.js
+index 6ab95d8..0e42d6a 100644
+--- a/server.js
++++ b/server.js
+@@ -16,6 +16,8 @@ const {
+   getTeamFeePayVolunteerSummary,
+   inspectTeamFeePayAgreementReport,
+ } = require("./services/sharepointService");
++const { namedUserAllowed, agreementAnalytics, complaintAnalytics } = require("./services/privacyAccess");
++const { createLoginAttempt, consumeLoginAttempt } = require("./services/loginFlow");
+ const app = express();
+ const PORT = process.env.PORT || 3001;
+ const {
+@@ -71,6 +73,11 @@ app.use(
+ );
+ 
+ app.use(express.json());
++// Authenticated responses must not be retained by browser or intermediary caches.
++app.use("/api", (req, res, next) => {
++  res.set("Cache-Control", "no-store");
++  next();
++});
+ 
+ app.get("/api/auth/me", (req, res) => {
+   if (!req.session.user) {
+@@ -104,10 +111,12 @@ app.use("/api/membership-pilot", createMembershipPilotRouter());
+ 
+ app.get("/auth/login", async (req, res) => {
+   try {
+-    const authUrl = await msalClient.getAuthCodeUrl(
+-      authCodeUrlParameters
+-    );
+-
++    const attempt = createLoginAttempt();
++    req.session.loginAttempt = attempt;
++    const authUrl = await msalClient.getAuthCodeUrl({
++      ...authCodeUrlParameters, state: attempt.state, nonce: attempt.nonce,
++    });
++    await new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
+     res.redirect(authUrl);
+   } catch (error) {
+     console.error("Unable to start sign-in:", error);
+@@ -120,22 +129,27 @@ app.get("/auth/login", async (req, res) => {
+ 
+ app.get("/auth/redirect", async (req, res) => {
+   try {
++    const attempt = consumeLoginAttempt(req.session, req.query.state);
++    if (!attempt || typeof req.query.code !== "string") {
++      return res.status(400).json({ error: "Sign-in expired or invalid. Start sign-in again." });
++    }
++    await new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
+     const tokenResponse = await msalClient.acquireTokenByCode({
+       code: req.query.code,
+       scopes: authCodeUrlParameters.scopes,
+       redirectUri,
+     });
+ 
+-  req.session.user = {
+-  homeAccountId: tokenResponse.account?.homeAccountId,
+-  username: tokenResponse.account?.username,
+-  name: tokenResponse.account?.name,
+-};
+-
+-console.log(
+-  "Successful Entra sign-in:",
+-  req.session.user.username
+-);
++    if (tokenResponse.idTokenClaims?.nonce !== attempt.nonce || !tokenResponse.account?.username) {
++      return res.status(400).json({ error: "Invalid sign-in response. Start sign-in again." });
++    }
++    // A new authenticated session must not reuse a pre-login session identifier.
++    await new Promise((resolve, reject) => req.session.regenerate(error => error ? reject(error) : resolve()));
++    req.session.user = {
++      homeAccountId: tokenResponse.account.homeAccountId,
++      username: tokenResponse.account.username,
++      name: tokenResponse.account.name,
++    };
+ 
+ req.session.save((error) => {
+   if (error) {
+@@ -345,7 +359,7 @@ app.get(
+       const summary =
+         await getTeamFeePayAgreementSummary();
+ 
+-      res.json(summary);
++      res.json(agreementAnalytics(summary));
+     } catch (error) {
+       console.error(
+         "Agreement summary failed:",
+@@ -382,6 +396,9 @@ app.get(
+ );
+ 
+ app.get("/api/members/reports", requireAuth, async (req, res) => {
++  if (!namedUserAllowed(process.env.TRUDASH_REPORT_ADMIN_EMAILS, req.session.user.username)) {
++    return res.status(403).json({ error: "Source report administrator access required" });
++  }
+   try {
+     const reports = await getTeamFeePayReports();
+ 
+@@ -421,7 +438,8 @@ app.get(
+   async (req, res) => {
+     try {
+       const summary = await getComplaintsSummary();
+-      res.json(summary);
++      const permitted = namedUserAllowed(process.env.TRUDASH_WELFARE_ADMIN_EMAILS, req.session.user.username);
++      res.json(permitted ? summary : complaintAnalytics(summary));
+     } catch (error) {
+       console.error(
+         "Failed to load complaints summary:",
+diff --git a/services/loginFlow.js b/services/loginFlow.js
+new file mode 100644
+index 0000000..8f3b388
+--- /dev/null
++++ b/services/loginFlow.js
+@@ -0,0 +1,11 @@
++const crypto = require('node:crypto');
++function createLoginAttempt(now = Date.now()) {
++  return { state: crypto.randomBytes(32).toString('hex'), nonce: crypto.randomBytes(32).toString('hex'), expiresAt: now + 10 * 60 * 1000 };
++}
++function consumeLoginAttempt(session, state, now = Date.now()) {
++  const attempt = session.loginAttempt;
++  delete session.loginAttempt;
++  if (!attempt || typeof state !== 'string' || state !== attempt.state || attempt.expiresAt <= now) return null;
++  return attempt;
++}
++module.exports = { createLoginAttempt, consumeLoginAttempt };
+diff --git a/services/privacyAccess.js b/services/privacyAccess.js
+new file mode 100644
+index 0000000..73f2254
+--- /dev/null
++++ b/services/privacyAccess.js
+@@ -0,0 +1,23 @@
++// Identity and permission are separate. Personal-data access requires named users.
++function namedUserAllowed(value, username) {
++  const email = String(username || "").trim().toLowerCase();
++  if (!/^[^\s@]+@[^\s@]+$/.test(email)) return false;
++  return String(value || "").split(",").some(entry => {
++    const candidate = entry.trim().toLowerCase();
++    return /^[^\s@]+@[^\s@]+$/.test(candidate) && candidate === email;
++  });
++}
++function agreementAnalytics(summary) {
++  return {
++    source: { lastModifiedDateTime: summary.source?.lastModifiedDateTime || null },
++    agreements: (summary.agreements || []).map(item => ({
++      documentName: item.documentName, version: item.version,
++      signed: item.signed, pending: item.pending, total: item.total,
++      completionPercentage: item.completionPercentage,
++    })),
++  };
++}
++function complaintAnalytics(summary) {
++  return { openComplaints: summary.openComplaints, detailsRestricted: true };
++}
++module.exports = { namedUserAllowed, agreementAnalytics, complaintAnalytics };
+diff --git a/tests/membershipAccess.test.cjs b/tests/membershipAccess.test.cjs
+new file mode 100644
+index 0000000..448c851
+--- /dev/null
++++ b/tests/membershipAccess.test.cjs
+@@ -0,0 +1,28 @@
++const test = require('node:test');
++const assert = require('node:assert/strict');
++const express = require('express');
++const { createMembershipPilotRouter } = require('../routes/membershipPilot');
++async function scenario(t, admins, username) {
++ let calls = 0;
++ const app = express(); app.use(express.json());
++ app.use((req,res,next) => { req.session = username ? {user:{username}} : {}; next(); });
++ app.use('/api/membership-pilot', createMembershipPilotRouter({env:{NODE_ENV:'production', MEMBERSHIP_PILOT_ENABLED:'true', MEMBERSHIP_PILOT_ADMIN_EMAILS:admins,TCM_BACKEND_URL:'https://tcm.example',TCM_REGISTRATION_URL:'https://register.example',TRUDASH_MEMBERSHIP_SHARED_SECRET:'x'.repeat(40),APP_BASE_URL:'https://trudash.example'},fetchImpl:async()=>{calls++;return new Response(JSON.stringify({members:[]}),{headers:{'Content-Type':'application/json'}})}}));
++ const server = await new Promise(resolve => {const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
++ t.after(()=>new Promise(resolve=>server.close(resolve)));
++ return {url:`http://127.0.0.1:${server.address().port}/api/membership-pilot`,calls:()=>calls};
++}
++test('domain wildcard never exposes directory or CSV or volunteer records',async t=>{
++ const s=await scenario(t,'@wwfc.org.uk','coach@wwfc.org.uk');
++ assert.equal((await (await fetch(s.url+'/config')).json()).available,false);
++ for(const path of ['/members','/registrations.csv','/volunteers'])assert.equal((await fetch(s.url+path)).status,403);
++ assert.equal(s.calls(),0);
++});
++test('named administrator can read while anonymous users cannot',async t=>{
++ const named=await scenario(t,'admin@wwfc.org.uk','admin@wwfc.org.uk');
++ const response=await fetch(named.url+'/members');assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');assert.equal(named.calls(),1);
++ const anonymous=await scenario(t,'admin@wwfc.org.uk',null);assert.equal((await fetch(anonymous.url+'/members')).status,401);assert.equal(anonymous.calls(),0);
++});
++test('cross-origin mutations are rejected before forwarding',async t=>{
++ const s=await scenario(t,'admin@wwfc.org.uk','admin@wwfc.org.uk');
++ assert.equal((await fetch(s.url+'/registrations/member1/billing/cancel',{method:'POST',headers:{Origin:'https://attacker.example'}})).status,403);assert.equal(s.calls(),0);
++});
+diff --git a/tests/privacyAccess.test.cjs b/tests/privacyAccess.test.cjs
+new file mode 100644
+index 0000000..870d312
+--- /dev/null
++++ b/tests/privacyAccess.test.cjs
+@@ -0,0 +1,29 @@
++const test = require('node:test');
++const assert = require('node:assert/strict');
++const { namedUserAllowed, agreementAnalytics, complaintAnalytics } = require('../services/privacyAccess');
++test('personal access requires explicit matching email, never domain wildcard', () => {
++  assert.equal(namedUserAllowed('@wwfc.org.uk', 'coach@wwfc.org.uk'), false);
++  assert.equal(namedUserAllowed('chair@wwfc.org.uk, secretary@wwfc.org.uk', ' COACH@wwfc.org.uk '), false);
++  assert.equal(namedUserAllowed('chair@wwfc.org.uk, secretary@wwfc.org.uk', ' Chair@wwfc.org.uk '), true);
++  assert.equal(namedUserAllowed('', ''), false);
++  assert.equal(namedUserAllowed('chair@wwfc.org.uk', 'chair@wwfc.org.uk.evil'), false);
++});
++test('agreement response excludes member identities and future extra fields', () => {
++  const output = agreementAnalytics({ source: {fileName:'sensitive.xlsx',lastModifiedDateTime:'2026-10-14'}, agreements:[{documentName:'Agreement',version:'1',signed:10,pending:2,total:12,completionPercentage:83,pendingMembers:[{firstName:'Child'}],email:'private'}] });
++  assert.deepEqual(output, {source:{lastModifiedDateTime:'2026-10-14'},agreements:[{documentName:'Agreement',version:'1',signed:10,pending:2,total:12,completionPercentage:83}]});
++});
++test('complaint summary excludes linked case references and staff identities', () => {
++ assert.deepEqual(complaintAnalytics({openComplaints:2,cases:[{caseRef:'C1',caseOwner:'Person'}]}),{openComplaints:2,detailsRestricted:true});
++});
++const { createLoginAttempt, consumeLoginAttempt } = require('../services/loginFlow');
++test('login state is tied to the initiating session, expires and is consumed once', () => {
++ const attempt = createLoginAttempt(1000);
++ assert.notEqual(attempt.state, attempt.nonce);
++ assert.notEqual(attempt.state, createLoginAttempt(1000).state);
++ const session = {loginAttempt:attempt};
++ assert.equal(consumeLoginAttempt(session, attempt.state, 1001), attempt);
++ assert.equal(consumeLoginAttempt(session, attempt.state, 1001), null);
++ assert.equal(consumeLoginAttempt({loginAttempt:attempt}, 'attacker',1001),null);
++ assert.equal(consumeLoginAttempt({loginAttempt:attempt}, attempt.state,attempt.expiresAt),null);
++ assert.equal(consumeLoginAttempt({}, attempt.state,1001),null);
++});
