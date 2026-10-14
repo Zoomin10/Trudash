@@ -16,6 +16,8 @@ const {
   getTeamFeePayVolunteerSummary,
   inspectTeamFeePayAgreementReport,
 } = require("./services/sharepointService");
+const { namedUserAllowed, agreementAnalytics, complaintAnalytics } = require("./services/privacyAccess");
+const { createLoginAttempt, consumeLoginAttempt } = require("./services/loginFlow");
 const app = express();
 const PORT = process.env.PORT || 3001;
 const {
@@ -71,6 +73,11 @@ app.use(
 );
 
 app.use(express.json());
+// Authenticated responses must not be retained by browser or intermediary caches.
+app.use("/api", (req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
 
 app.get("/api/auth/me", (req, res) => {
   if (!req.session.user) {
@@ -104,10 +111,12 @@ app.use("/api/membership-pilot", createMembershipPilotRouter());
 
 app.get("/auth/login", async (req, res) => {
   try {
-    const authUrl = await msalClient.getAuthCodeUrl(
-      authCodeUrlParameters
-    );
-
+    const attempt = createLoginAttempt();
+    req.session.loginAttempt = attempt;
+    const authUrl = await msalClient.getAuthCodeUrl({
+      ...authCodeUrlParameters, state: attempt.state, nonce: attempt.nonce,
+    });
+    await new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
     res.redirect(authUrl);
   } catch (error) {
     console.error("Unable to start sign-in:", error);
@@ -120,22 +129,27 @@ app.get("/auth/login", async (req, res) => {
 
 app.get("/auth/redirect", async (req, res) => {
   try {
+    const attempt = consumeLoginAttempt(req.session, req.query.state);
+    if (!attempt || typeof req.query.code !== "string") {
+      return res.status(400).json({ error: "Sign-in expired or invalid. Start sign-in again." });
+    }
+    await new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
     const tokenResponse = await msalClient.acquireTokenByCode({
       code: req.query.code,
       scopes: authCodeUrlParameters.scopes,
       redirectUri,
     });
 
-  req.session.user = {
-  homeAccountId: tokenResponse.account?.homeAccountId,
-  username: tokenResponse.account?.username,
-  name: tokenResponse.account?.name,
-};
-
-console.log(
-  "Successful Entra sign-in:",
-  req.session.user.username
-);
+    if (tokenResponse.idTokenClaims?.nonce !== attempt.nonce || !tokenResponse.account?.username) {
+      return res.status(400).json({ error: "Invalid sign-in response. Start sign-in again." });
+    }
+    // A new authenticated session must not reuse a pre-login session identifier.
+    await new Promise((resolve, reject) => req.session.regenerate(error => error ? reject(error) : resolve()));
+    req.session.user = {
+      homeAccountId: tokenResponse.account.homeAccountId,
+      username: tokenResponse.account.username,
+      name: tokenResponse.account.name,
+    };
 
 req.session.save((error) => {
   if (error) {
@@ -345,7 +359,7 @@ app.get(
       const summary =
         await getTeamFeePayAgreementSummary();
 
-      res.json(summary);
+      res.json(agreementAnalytics(summary));
     } catch (error) {
       console.error(
         "Agreement summary failed:",
@@ -382,6 +396,9 @@ app.get(
 );
 
 app.get("/api/members/reports", requireAuth, async (req, res) => {
+  if (!namedUserAllowed(process.env.TRUDASH_REPORT_ADMIN_EMAILS, req.session.user.username)) {
+    return res.status(403).json({ error: "Source report administrator access required" });
+  }
   try {
     const reports = await getTeamFeePayReports();
 
@@ -421,7 +438,8 @@ app.get(
   async (req, res) => {
     try {
       const summary = await getComplaintsSummary();
-      res.json(summary);
+      const permitted = namedUserAllowed(process.env.TRUDASH_WELFARE_ADMIN_EMAILS, req.session.user.username);
+      res.json(permitted ? summary : complaintAnalytics(summary));
     } catch (error) {
       console.error(
         "Failed to load complaints summary:",

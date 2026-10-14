@@ -1,5 +1,6 @@
 const express = require("express");
 const crypto = require("crypto");
+const { namedUserAllowed } = require("../services/privacyAccess");
 
 function configuration(env) {
   const enabled = env.MEMBERSHIP_PILOT_ENABLED === "true";
@@ -44,16 +45,7 @@ function signAssertion(secret, req, path, volunteerSuperAdmin = false) {
   return `${header}.${payload}.${signature}`;
 }
 function isMembershipAdmin(admins, username) {
-  const email = String(username || "").trim().toLowerCase();
-  const parts = email.split("@");
-
-  if (parts.length !== 2 || !parts[0] || !parts[1]) return false;
-
-  return admins.some((entry) =>
-    entry.startsWith("@")
-      ? parts[1] === entry.slice(1)
-      : email === entry
-  );
+  return namedUserAllowed(admins.join(","), username);
 }
 
 function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } = {}) {

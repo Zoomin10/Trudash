@@ -1543,7 +1543,7 @@ if (!auth.authenticated) {
     >
       <div className="agreement-modal-header">
         <div>
-          <h3>Pending Members</h3>
+          <h3>Agreement acceptance summary</h3>
           <p>{selectedAgreement.documentName}</p>
         </div>
 
@@ -1563,20 +1563,7 @@ if (!auth.authenticated) {
       </div>
 
       <div className="agreement-member-list">
-        {selectedAgreement.pendingMembers?.map((member, index) => (
-          <div
-            className="agreement-member-row"
-            key={`${member.firstName}-${member.lastName}-${index}`}
-          >
-            <span className="agreement-member-name">
-              {member.firstName} {member.lastName}
-            </span>
-
-            <span className="agreement-member-team">
-              {member.teams || "—"}
-            </span>
-          </div>
-        ))}
+        <p>Individual follow-up records are available to authorised administrators in TeamFeePay.</p>
       </div>
     </div>
   </div>
@@ -1661,7 +1648,9 @@ if (!auth.authenticated) {
         </div>
       ) : (
         <p className="empty-state">
-          No open complaints.
+          {complaintsSummary?.detailsRestricted
+            ? "Individual complaint records are restricted to authorised welfare users."
+            : "No open complaints."}
         </p>
       )}
     </div>
