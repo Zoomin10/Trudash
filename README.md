@@ -1,37 +1,73 @@
-# Medical declarations and restricted full CSV export
+# PostgreSQL sessions and session revocation
 
-This update preserves the public registration form, its medical/allergy fields and existing database values. It removes those declarations from the member profile in both TruDash and the standalone TCM administration screen. Ordinary member JSON uses an explicit field list; cancellation and payment-setup JSON are filtered too. Authorised full CSV reports still contain medical declarations.
+This package changes TruDash only. It replaces the in-memory login store with PostgreSQL, enforces idle and maximum lifetimes in the backend, and adds a Super Admin session-revocation button. Existing application permissions remain in TCM and are still checked on each protected request. No TCM change or Prisma migration is included.
 
-## Configuration
+## Required Railway setup before deployment
 
-Add this variable to the TruDash backend service, separately in Development and Production:
+1. In the TruDash Railway project add a PostgreSQL service for session data, or use a specifically approved existing PostgreSQL database reachable by TruDash. A dedicated database is preferable. Development and Production must use separate session databases, with separate secrets; do not share their session state.
+2. On the TruDash application backend add SESSION_DATABASE_URL referencing that service. If the database service is named Postgres, Railway's reference is:
 
-TRUDASH_FULL_CSV_EXPORT_EMAILS=approved-person@wwfc.org.uk,another-approved-person@wwfc.org.uk
+SESSION_DATABASE_URL=${{Postgres.DATABASE_URL}}
 
-Use actual approved Microsoft login usernames. Named users must ALSO have membership-pilot administrator access through MEMBERSHIP_PILOT_ADMIN_EMAILS. Domain-only entries do not grant full CSV access. An absent/empty export list denies everyone. The finance, welfare, report-link and volunteer Super Admin lists do not confer this export permission. No new secret or environment variable is required in TCM.
+Use the actual service name. This is a new TruDash variable, not TCM's DATABASE_URL. A Railway internal database URL works only within the appropriate Railway private network/environment; local testing needs the approved external/proxy connection string. Do not paste credentials into source control, screenshots or messages.
+3. Keep SESSION_SECRET stable and secret, at least 32 bytes long. All replicas of the same environment must use the same secret. Keep NODE_ENV=production and the correct APP_BASE_URL for deployed Railway environments, including Development if using HTTPS. Secure cookies depend on HTTPS and the existing trusted reverse-proxy arrangement.
+4. Set the TruDash pre-deploy command to npm run sessions:setup, or add it to the existing pre-deploy workflow without dropping other checks. The command runs on the backend after dependencies are installed and creates the dedicated trudash_auth schema/tables. It is repeatable. It does not modify TCM tables or move application permissions.
 
-The bridge signs the export permission and the TCM backend verifies it. Direct requests, browser-supplied identity headers and the legacy shared-password admin cookie cannot grant full CSV access. Legacy-password users may still view the non-medical admin directory where that login is enabled, but must use an authorised Microsoft account through TruDash to export.
+The connection user needs permission to create the schema/tables on initial setup and subsequently read/write them. Review least-privilege database credentials for production. TLS settings come from the PostgreSQL connection configuration; the code does not disable certificate validation.
 
-## Deploy in this order
+## Files and deployment
 
-1. Copy TotalClubManagement files to that repository and TruDash files to the TruDash repository at matching paths. These are selected files, not complete repositories. Preserve later changes if your branch differs. Alternative patch files are provided; use either patch application or file copying, not both.
-2. In TCM commit BOTH backend/prisma/schema.prisma and backend/prisma/migrations/20261014102500_add_report_export_audit/migration.sql. The migration adds only ReportExportAudit; it does not delete or alter member medical declarations.
-3. Deploy TCM backend first. Run the usual Prisma client generation during build and npx prisma migrate deploy as the Railway pre-deploy command. Do not use migrate dev or reset against Production. Until the bridge update is deployed, full export is deliberately denied because old assertions lack the permission.
-4. Set the new TruDash variable and deploy TruDash. Deploy the TCM frontend so its old medical profile is also removed. No new packages are required.
-5. Fully refresh both apps or sign out and back in to discard already-loaded data. Test Development before repeating these steps in Production.
+Copy the TruDash files to their matching repository paths, or apply the included patch after git apply --check. Do not do both. Include package.json AND package-lock.json, the db/sessions.sql file, setup script and new services/routes. Preserve subsequent branch edits if the base commit differs.
 
-## What to verify
+Run npm ci at the TruDash repository root to install pg and connect-pg-simple. The test-only PGlite development dependency exercises PostgreSQL SQL locally; it is not the production database or store. Install frontend dependencies as usual and run npm --prefix frontend run build. Existing start remains npm start; build commands remain unchanged. A local setup command is npm run sessions:setup with SESSION_DATABASE_URL already supplied for the intended database.
 
-- Submit a test registration with synthetic medical and allergy values. Confirm they remain in the database and Stripe setup continues as before.
-- For a pilot administrator outside the export list: the member tabs contain no medical section; there is no full-export button. Inspect /api/membership-pilot/members JSON and direct TCM /api/admin/registrations JSON where authorised: neither should contain medicalInfo or allergies. Payment cancellation/setup responses must also omit those fields.
-- For an approved exporter who is also a pilot administrator: the button is labelled Full CSV (includes medical), explains the sensitive contents and asks for confirmation. The file includes declarations. Membership-pilot access alone must not grant download rights.
-- Directly requesting registrations.csv without export permission returns 403 at the bridge or TCM backend. Unauthenticated access remains 401. Setting @wwfc.org.uk alone as an export entry grants no access.
-- ReportExportAudit stores actor, timestamp, report type and row count. It stores no CSV, player identifiers or medical values. A row records an authorised export generated and released for sending; it cannot prove the user saved the file. If the audit write fails, the CSV is not released.
+Commit/push/merge to the branch Railway deploys. Configure the session database and pre-deploy command first, then deploy Development. The app refuses to start if the connection/secret is missing or the session tables are unavailable; there is no silent MemoryStore fallback. Initial setup should run before the new server starts.
 
-## Verification and limits
+All existing logins must sign in again once: the cookie is renamed trudash.sid and old memory sessions are not imported. Stable database-backed sessions can survive subsequent redeployments if the secret/database are unchanged and the time limits have not expired. A new sign-in attempt interrupted by a deployment may need restarting; Microsoft token/code handling is otherwise unchanged.
 
-Sixteen local tests passed across the two repositories, including HTTP tests with signed bridge assertions, ordinary versus export access, JSON filtering, retained CSV declarations and audit failure. Both frontend production builds passed. Prisma format, schema validation, client generation and migration diff passed; the generated diff matches the additive migration. No live database migration, Microsoft login or Railway deployment was performed here.
+## Defaults and optional settings
 
-This is the first restricted export, not the complete Reports Centre. Separate finance, membership and squad reports can follow with their own permissions. Agree retention for downloaded files and export audit metadata; restrict database access to the audit records. Existing downloaded files and exports cannot be recalled by this update. The browser field filtering does not anonymise other member/contact information, and full pilot administrators still see those ordinary registration details.
+| Variable | Default | Allowed values |
+| --- | --- | --- |
+| SESSION_IDLE_MINUTES | 15 | Integer 1 to 120 |
+| SESSION_MAX_HOURS | 8 | Integer 1 to 24 |
+| SESSION_AUDIT_RETENTION_DAYS | 90 | Integer 1 to 365 |
 
-Bases: TruDash main ec77b04e317ba91e630e742f9f32fece83ab3b6c and TCM main 50848afe2d5e9f64a74bcde305573a87d166ba61, reviewed 14 October 2026. Earlier sign-in, aggregate-response and finance restrictions are preserved.
+Approve the audit retention period operationally and align the club retention schedule. Ninety days is an implementation default, not a statutory requirement. Permissions do not become more permissive as a session ages.
+
+Idle activity is pointer presses, key presses, scrolling or touch interaction in the visible TruDash tab. Those interactions can send a same-origin activity POST, at most once per 30 seconds. Dashboard polling and an open unattended tab do not extend the idle lifetime. The eight-hour maximum is never extended by activity. The backend enforces these limits even if the browser/client timers are bypassed.
+
+The cookie is HttpOnly, SameSite=Lax and Secure in production, with a host-only scope and path /. Sessions contain the minimal existing sign-in identity and session/login metadata, not Microsoft access tokens or medical records. Do not expose session rows, cookies or IDs to ordinary users or logs. The database also needs restricted administrative access and backup/transfer review.
+
+## Revoking a user's sessions
+
+As an active authorised Super Admin (including the existing recovery list), open Club volunteers, select a volunteer and click Revoke TruDash sessions. Confirm the email shown. All their stored current TruDash sessions are invalidated across instances, with an audit event. Revoking your own sessions signs you out too.
+
+This does not disable the Microsoft account, remove application permissions, sign the user out of Microsoft 365 or block future sign-in. Remove/deactivate saved permissions and, where appropriate, remove recovery access or act in Microsoft Entra to prevent ongoing access. Already-running requests may finish; the next authenticated request must fail. Data already loaded or downloaded cannot be recalled.
+
+Database revocation epochs prevent an old session being revived by a delayed in-flight save. If the revocation audit write fails, the revocation transaction rolls back and the endpoint reports failure. Successful messages mean invalidation was committed, not that a remote browser tab was closed. The audit count is the number of stored session rows deleted, not a count of browser windows/devices.
+
+## Tables and automatic cleanup
+
+- trudash_auth.sessions: server-side sessions. Expired rows are pruned at startup and approximately every 15 minutes while the app runs. Expired/revoked access is denied before pruning occurs.
+- trudash_auth.revocations: per-user revocation epochs. Old markers are removed only after two days and with no unexpired matching session, beyond the permitted maximum session lifetime.
+- trudash_auth.session_audit: timestamp, acting username, target username, action and deleted-row count. No cookie or session ID is recorded. Events older than the configured retention period are pruned on the same schedule. Backup retention requires separate controls.
+
+Database outages return an unavailable response for session checks/storage; the application does not accept an unverifiable session. Cleanup resumes when database service recovers. Do not treat this as a replacement for backups, monitoring or the wider GDPR implementation.
+
+## Development verification
+
+1. Deploy after session table setup. Start a fresh Microsoft login as Chair and confirm ordinary pages, permissions, finance restrictions and CSV export still work. Existing cookies from before this update should not authenticate.
+2. Open a separate incognito login as the test volunteer. As Chair, revoke their sessions. The next API request or user activity must require sign-in. Confirm Chair remains signed in. The test user can sign in again if still authorised.
+3. In the session database, verify a session_audit event with actor/target/action. Do not copy session table contents into messages.
+4. For a quick idle check in Development, temporarily set SESSION_IDLE_MINUTES=1, redeploy and sign in afresh. Leave the tab untouched for over a minute. Background polling must not keep it logged in; check /api/auth/me returns 401. Restore 15 afterward. Interactions must keep an otherwise valid session alive, but never beyond the configured maximum.
+5. Sign in, redeploy the same app without changing secret/database, then request a protected page within its lifetime: the session should survive. If running two replicas, verify the same login works regardless of which serves it.
+6. A normal account calling POST /api/admin/sessions/revoke directly must receive 403. An unauthenticated account receives 401; cross-origin or unconfirmed requests are denied. Live Microsoft sign-in and Railway behaviour still need these checks after deployment.
+
+Nineteen local tests passed. They use the actual PostgreSQL session store against an embedded PostgreSQL SQL engine, real HTTP cookies and two app instances, including expiry, stale-session revival, revocation/audit rollback, cleanup, HTTPS cookie flags and earlier sign-in/finance regressions. This verifies SQL/store logic, not Railway network/TLS or live Microsoft sign-in. Locked npm ci and the Vite production build passed. No live database was configured or changed here.
+
+Run node --test tests/*.test.cjs after npm ci (including development dependencies). To omit test dependencies in production you may use npm ci --omit=dev at the backend root; frontend build dependencies still need their normal installation.
+
+For rollback restore the previous code and package files together. Rolling back returns to the prior session behaviour and signs users out again; it does not require dropping the new schema. Do not drop session/audit tables to troubleshoot a login error. Check the pre-deploy result, variable/environment selection and backend logs first.
+
+Base: TruDash main 2d5f2e6, reviewed 14 October 2026. No hosting resources or deployments were created by this package.

@@ -1,139 +1,574 @@
+diff --git a/db/sessions.sql b/db/sessions.sql
+new file mode 100644
+index 0000000..5ebc356
+--- /dev/null
++++ b/db/sessions.sql
+@@ -0,0 +1,22 @@
++CREATE SCHEMA IF NOT EXISTS trudash_auth;
++CREATE TABLE IF NOT EXISTS trudash_auth.sessions (
++ sid varchar PRIMARY KEY,
++ sess json NOT NULL,
++ expire timestamp(6) NOT NULL
++);
++CREATE INDEX IF NOT EXISTS sessions_expire_idx ON trudash_auth.sessions(expire);
++CREATE INDEX IF NOT EXISTS sessions_username_idx ON trudash_auth.sessions(lower(sess->'user'->>'username'));
++CREATE TABLE IF NOT EXISTS trudash_auth.revocations (
++ username text PRIMARY KEY,
++ epoch bigint NOT NULL DEFAULT 0,
++ updated_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP
++);
++CREATE TABLE IF NOT EXISTS trudash_auth.session_audit (
++ id bigserial PRIMARY KEY,
++ created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
++ actor text NOT NULL,
++ target text NOT NULL,
++ action text NOT NULL,
++ session_count integer NOT NULL
++);
++CREATE INDEX IF NOT EXISTS session_audit_created_idx ON trudash_auth.session_audit(created_at);
 diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
-index 0460200..0b74a97 100644
+index 0b74a97..c9c29a6 100644
 --- a/frontend/src/App.jsx
 +++ b/frontend/src/App.jsx
-@@ -92,11 +92,14 @@ const [auth, setAuth] = useState({
+@@ -89,6 +89,27 @@ const [auth, setAuth] = useState({
+   user: null,
+ });
+ 
++// Only real interaction extends idle expiry; background fetches do not.
++useEffect(() => {
++  if (!auth.authenticated) return;
++  let lastSent = 0;
++  let stopped = false;
++  const activity = () => {
++    if (document.visibilityState !== "visible" || Date.now() - lastSent < 30000) return;
++    lastSent = Date.now();
++    fetch("/api/auth/activity", {method:"POST",credentials:"include"})
++      .then(response => {
++        if (!stopped && response.status === 401) {
++          setAuth({loading:false,authenticated:false,user:null});
++          setMembershipPilot(null);
++        }
++      }).catch(() => {});
++  };
++  const events = ["pointerdown", "keydown", "scroll", "touchstart"];
++  events.forEach(event => window.addEventListener(event, activity, {passive:true}));
++  return () => { stopped = true; events.forEach(event => window.removeEventListener(event, activity)); };
++}, [auth.authenticated]);
++
  useEffect(() => {
    if (!auth.authenticated) return;
    let cancelled = false;
--  fetch("/api/membership-pilot/config")
-+  const refreshAccess = () => fetch("/api/membership-pilot/config")
-     .then((response) => response.ok ? response.json() : null)
-     .then((data) => { if (!cancelled) setMembershipPilot(data); })
-     .catch(() => { if (!cancelled) setMembershipPilot(null); });
--  return () => { cancelled = true; };
-+  refreshAccess();
-+  const timer = setInterval(refreshAccess, 60000);
-+  window.addEventListener("focus", refreshAccess);
-+  return () => { cancelled = true; clearInterval(timer); window.removeEventListener("focus", refreshAccess); };
- }, [auth.authenticated]);
- 
- useEffect(() => {
-@@ -452,7 +455,7 @@ if (!auth.authenticated) {
-             Membership pilot
-           </button>
-         )}
--        {membershipPilot?.available && (
-+        {membershipPilot?.volunteersAvailable && (
-           <button className={`nav-item ${currentSection === "club-volunteers" ? "active" : ""}`}
-             onClick={() => { setCurrentSection("club-volunteers"); setMobileMenuOpen(false); }}>
-             Club volunteers
-@@ -565,7 +568,7 @@ if (!auth.authenticated) {
- 
-       <main className="dashboard-content">
-         {currentSection === "social-media" && membershipPilot?.available && <SocialMedia />}
--        {currentSection === "club-volunteers" && membershipPilot?.available && (
-+        {currentSection === "club-volunteers" && membershipPilot?.volunteersAvailable && (
-           <ClubVolunteers registrationUrl={membershipPilot.registrationUrl} />
-         )}
-         {currentSection === "membership-pilot" && membershipPilot?.available && (
 diff --git a/frontend/src/components/ClubVolunteers.jsx b/frontend/src/components/ClubVolunteers.jsx
-index 0679dbc..c8c319d 100644
+index a2e30f4..d26b3ce 100644
 --- a/frontend/src/components/ClubVolunteers.jsx
 +++ b/frontend/src/components/ClubVolunteers.jsx
-@@ -112,7 +112,7 @@ function VolunteerPanel({ volunteer, roles, superAdmin, onClose, onSaved }) {
-           <section className="modal-section"><h3>Review & administration</h3><div className="modal-grid volunteer-form-grid">
-             <label>Review status<select disabled={locked || busy} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}><option value="AWAITING_REVIEW">Awaiting review</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></select></label>
-             <label>Volunteer administration access<select disabled={!superAdmin || busy} value={form.accessRole} onChange={(event) => setForm({ ...form, accessRole: event.target.value })}><option value="NONE">None</option><option value="ADMIN">Admin</option><option value="SUPER_ADMIN">Super Admin</option></select></label>
--          </div><p className="volunteer-hint">{superAdmin ? "You can manage volunteer administration access." : "Only a Super Admin can change administration access."}</p>{locked && <p className="volunteer-hint">A Super Admin must update this volunteer's roles, status or notes.</p>}</section>
-+          </div><p className="volunteer-hint">{superAdmin ? "Admin and Super Admin grant volunteer management access only. The volunteer must be Active with current agreements accepted. None grants no access." : "Only a Super Admin can grant administration access. Access requires Active status and current agreements."}</p>{locked && <p className="volunteer-hint">A Super Admin must update this volunteer's roles, status or notes.</p>}</section>
+@@ -39,6 +39,7 @@ function VolunteerPanel({ volunteer, roles, permissionOptions, superAdmin, onClo
+   const [busy, setBusy] = useState(false);
+   const [error, setError] = useState("");
+   const [link, setLink] = useState("");
++  const [sessionMessage, setSessionMessage] = useState("");
+   const panel = useRef(null);
+ 
+   useEffect(() => {
+@@ -83,6 +84,18 @@ function VolunteerPanel({ volunteer, roles, permissionOptions, superAdmin, onClo
+     } catch (failure) { setError(failure.message); }
+     finally { setBusy(false); }
+   }
++  async function revokeSessions() {
++    if (!window.confirm(`End all current TruDash sessions for ${volunteer.email}? This does not disable their Microsoft account or remove permissions.`)) return;
++    setBusy(true); setError(""); setSessionMessage("");
++    try {
++      const response = await fetch("/api/admin/sessions/revoke", {method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:volunteer.email,confirm:true})});
++      const data = await response.json();
++      if (!response.ok) throw new Error(data.error || "Sessions could not be revoked.");
++      if (data.revokedSelf) { window.location.assign("/"); return; }
++      setSessionMessage("Current TruDash sessions revoked. They can sign in again if still authorised.");
++    } catch (failure) { setError(failure.message); }
++    finally { setBusy(false); }
++  }
+   async function copyLink() {
+     try { await navigator.clipboard.writeText(link); }
+     catch { setError("Select the link below and copy it to share with the volunteer."); }
+@@ -130,6 +143,7 @@ function VolunteerPanel({ volunteer, roles, permissionOptions, superAdmin, onClo
+             {link && <div className="volunteer-link-box"><label className="volunteer-form-label">Private acceptance link<input readOnly value={link} onFocus={(event) => event.target.select()} /></label><button type="button" className="secondary-btn compact-btn" onClick={copyLink}>Copy link</button></div>}
+           </section>
          </div>
-         <div hidden={tab !== "details"}>
-           <section className="modal-section"><h3>Contact details</h3><div className="modal-grid"><Detail label="Full name">{fullName(volunteer)}</Detail><Detail label="Email address">{volunteer.email}</Detail><Detail label="Telephone">{volunteer.phone}</Detail><Detail label="Team">{volunteer.team}</Detail><Detail label="Registered">{formatDate(volunteer.createdAt)}</Detail><Detail label="Registration reference">{volunteer.id}</Detail></div></section>
-diff --git a/routes/membershipPilot.js b/routes/membershipPilot.js
-index 3fe57bc..c070994 100644
---- a/routes/membershipPilot.js
-+++ b/routes/membershipPilot.js
-@@ -18,7 +18,7 @@ function configuration(env) {
-     registrationUrl = publicUrl.href;
-   } catch { backend = null; registrationUrl = null; }
-   const secret = env.TRUDASH_MEMBERSHIP_SHARED_SECRET;
--  const ready = enabled && admins.length > 0 && backend && registrationUrl && secret && Buffer.byteLength(secret) >= 32;
-+  const ready = enabled && backend && registrationUrl && secret && Buffer.byteLength(secret) >= 32;
-   return { enabled, admins, backend, registrationUrl, secret, ready: Boolean(ready) };
++        {superAdmin && <section className="modal-section"><h3>TruDash sessions</h3><p>End this volunteer’s current TruDash logins. To remove ongoing access, also revoke permissions or deactivate their account.</p><button type="button" className="secondary-btn" disabled={busy} onClick={revokeSessions}>Revoke TruDash sessions</button>{sessionMessage && <p role="status">{sessionMessage}</p>}</section>}
+         <div className="volunteer-profile-footer"><span>Changes are saved to this volunteer's record.</span><button className="download-btn" disabled={busy || locked}>{busy ? "Saving…" : "Save volunteer"}</button></div>
+       </form>
+     </div>
+diff --git a/package-lock.json b/package-lock.json
+index b35fbe3..8e1da5e 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -10,10 +10,15 @@
+       "license": "ISC",
+       "dependencies": {
+         "@azure/msal-node": "^6.0.1",
++        "connect-pg-simple": "^10.0.0",
+         "dotenv": "^17.4.2",
+         "express": "^5.2.1",
+         "express-session": "^1.19.0",
++        "pg": "^8.23.1",
+         "xlsx": "^0.18.5"
++      },
++      "devDependencies": {
++        "@electric-sql/pglite": "^0.5.9"
+       }
+     },
+     "node_modules/@azure/msal-common": {
+@@ -38,6 +43,13 @@
+         "node": ">=20"
+       }
+     },
++    "node_modules/@electric-sql/pglite": {
++      "version": "0.5.9",
++      "resolved": "https://registry.npmjs.org/@electric-sql/pglite/-/pglite-0.5.9.tgz",
++      "integrity": "sha512-GoQTRMZ/o4J3sMW4mLDtDFGNOm1xy5oH+iHDALWll3uERY6OF4BSnL1t7FZH2Mlw+RPceDBlFJgSaecO73c4EA==",
++      "dev": true,
++      "license": "Apache-2.0"
++    },
+     "node_modules/accepts": {
+       "version": "2.0.0",
+       "resolved": "https://registry.npmjs.org/accepts/-/accepts-2.0.0.tgz",
+@@ -163,6 +175,18 @@
+         "node": ">=0.8"
+       }
+     },
++    "node_modules/connect-pg-simple": {
++      "version": "10.0.0",
++      "resolved": "https://registry.npmjs.org/connect-pg-simple/-/connect-pg-simple-10.0.0.tgz",
++      "integrity": "sha512-pBGVazlqiMrackzCr0eKhn4LO5trJXsOX0nQoey9wCOayh80MYtThCbq8eoLsjpiWgiok/h+1/uti9/2/Una8A==",
++      "license": "MIT",
++      "dependencies": {
++        "pg": "^8.12.0"
++      },
++      "engines": {
++        "node": "^18.18.0 || ^20.9.0 || >=22.0.0"
++      }
++    },
+     "node_modules/content-disposition": {
+       "version": "1.1.0",
+       "resolved": "https://registry.npmjs.org/content-disposition/-/content-disposition-1.1.0.tgz",
+@@ -850,6 +874,134 @@
+         "url": "https://opencollective.com/express"
+       }
+     },
++    "node_modules/pg": {
++      "version": "8.23.1",
++      "resolved": "https://registry.npmjs.org/pg/-/pg-8.23.1.tgz",
++      "integrity": "sha512-aL96AHANtWjPLDOLqnhx+ngp9+UK7ETEU8VJrDCGvsSSi/mGLcWYsS6Herg7lmaBJe4uwrfqsa7gTEFaSizDoQ==",
++      "license": "MIT",
++      "dependencies": {
++        "pg-connection-string": "^2.14.1",
++        "pg-pool": "^3.14.0",
++        "pg-protocol": "^1.16.1",
++        "pg-types": "2.2.0",
++        "pgpass": "1.0.5"
++      },
++      "engines": {
++        "node": ">= 16.0.0"
++      },
++      "optionalDependencies": {
++        "pg-cloudflare": "^1.4.1"
++      },
++      "peerDependencies": {
++        "pg-native": ">=3.0.1"
++      },
++      "peerDependenciesMeta": {
++        "pg-native": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/pg-cloudflare": {
++      "version": "1.4.1",
++      "resolved": "https://registry.npmjs.org/pg-cloudflare/-/pg-cloudflare-1.4.1.tgz",
++      "integrity": "sha512-6PQbsFWZcp9EmJEwy5cGQ2La+AMWpP46lgbb8X+U/XsHIUweYDNCpeuKck5RxL2MdVFi7krbbEi5nX4Zh7JhrQ==",
++      "license": "MIT",
++      "optional": true
++    },
++    "node_modules/pg-connection-string": {
++      "version": "2.14.1",
++      "resolved": "https://registry.npmjs.org/pg-connection-string/-/pg-connection-string-2.14.1.tgz",
++      "integrity": "sha512-qR3kGNPBLpCNtz0evbKA0Y/MRFXwSSdT+pTJvYp/bXTcReZbvX1kzF0IyTc1QnxqF7AZbOeBhNL8R5mYQZV/MA==",
++      "license": "MIT"
++    },
++    "node_modules/pg-int8": {
++      "version": "1.0.1",
++      "resolved": "https://registry.npmjs.org/pg-int8/-/pg-int8-1.0.1.tgz",
++      "integrity": "sha512-WCtabS6t3c8SkpDBUlb1kjOs7l66xsGdKpIPZsg4wR+B3+u9UAum2odSsF9tnvxg80h4ZxLWMy4pRjOsFIqQpw==",
++      "license": "ISC",
++      "engines": {
++        "node": ">=4.0.0"
++      }
++    },
++    "node_modules/pg-pool": {
++      "version": "3.14.0",
++      "resolved": "https://registry.npmjs.org/pg-pool/-/pg-pool-3.14.0.tgz",
++      "integrity": "sha512-gKtPkFdQPU3DksooVLi9LsjZxrsBUZIpa+7aVx+LV5pNh0KzP4Zleud2po+ConrxbuXGBJ6Hfer6hdgpIBpBaw==",
++      "license": "MIT",
++      "peerDependencies": {
++        "pg": ">=8.0"
++      }
++    },
++    "node_modules/pg-protocol": {
++      "version": "1.16.1",
++      "resolved": "https://registry.npmjs.org/pg-protocol/-/pg-protocol-1.16.1.tgz",
++      "integrity": "sha512-p9VOFMiHB/ZbJATetbg+99PxssTVSQRnyuPSQ67mN1+1KBOjZaZ83ZQzltnxPhJwSsC3nwVjJ10DVJlerbFzLg==",
++      "license": "MIT"
++    },
++    "node_modules/pg-types": {
++      "version": "2.2.0",
++      "resolved": "https://registry.npmjs.org/pg-types/-/pg-types-2.2.0.tgz",
++      "integrity": "sha512-qTAAlrEsl8s4OiEQY69wDvcMIdQN6wdz5ojQiOy6YRMuynxenON0O5oCpJI6lshc6scgAY8qvJ2On/p+CXY0GA==",
++      "license": "MIT",
++      "dependencies": {
++        "pg-int8": "1.0.1",
++        "postgres-array": "~2.0.0",
++        "postgres-bytea": "~1.0.0",
++        "postgres-date": "~1.0.4",
++        "postgres-interval": "^1.1.0"
++      },
++      "engines": {
++        "node": ">=4"
++      }
++    },
++    "node_modules/pgpass": {
++      "version": "1.0.5",
++      "resolved": "https://registry.npmjs.org/pgpass/-/pgpass-1.0.5.tgz",
++      "integrity": "sha512-FdW9r/jQZhSeohs1Z3sI1yxFQNFvMcnmfuj4WBMUTxOrAyLMaTcE1aAMBiTlbMNaXvBCQuVi0R7hd8udDSP7ug==",
++      "license": "MIT",
++      "dependencies": {
++        "split2": "^4.1.0"
++      }
++    },
++    "node_modules/postgres-array": {
++      "version": "2.0.0",
++      "resolved": "https://registry.npmjs.org/postgres-array/-/postgres-array-2.0.0.tgz",
++      "integrity": "sha512-VpZrUqU5A69eQyW2c5CA1jtLecCsN2U/bD6VilrFDWq5+5UIEVO7nazS3TEcHf1zuPYO/sqGvUvW62g86RXZuA==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=4"
++      }
++    },
++    "node_modules/postgres-bytea": {
++      "version": "1.0.1",
++      "resolved": "https://registry.npmjs.org/postgres-bytea/-/postgres-bytea-1.0.1.tgz",
++      "integrity": "sha512-5+5HqXnsZPE65IJZSMkZtURARZelel2oXUEO8rH83VS/hxH5vv1uHquPg5wZs8yMAfdv971IU+kcPUczi7NVBQ==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=0.10.0"
++      }
++    },
++    "node_modules/postgres-date": {
++      "version": "1.0.7",
++      "resolved": "https://registry.npmjs.org/postgres-date/-/postgres-date-1.0.7.tgz",
++      "integrity": "sha512-suDmjLVQg78nMK2UZ454hAG+OAW+HQPZ6n++TNDUX+L0+uUlLywnoxJKDou51Zm+zTCjrCl0Nq6J9C5hP9vK/Q==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=0.10.0"
++      }
++    },
++    "node_modules/postgres-interval": {
++      "version": "1.2.0",
++      "resolved": "https://registry.npmjs.org/postgres-interval/-/postgres-interval-1.2.0.tgz",
++      "integrity": "sha512-9ZhXKM/rw350N1ovuWHbGxnGh/SNJ4cnxHiM0rxE4VN41wsg8P8zWn9hv/buK00RP4WvlOyr/RBDiptyxVbkZQ==",
++      "license": "MIT",
++      "dependencies": {
++        "xtend": "^4.0.0"
++      },
++      "engines": {
++        "node": ">=0.10.0"
++      }
++    },
+     "node_modules/proxy-addr": {
+       "version": "2.0.8",
+       "resolved": "https://registry.npmjs.org/proxy-addr/-/proxy-addr-2.0.8.tgz",
+@@ -1097,6 +1249,15 @@
+         "url": "https://github.com/sponsors/ljharb"
+       }
+     },
++    "node_modules/split2": {
++      "version": "4.2.0",
++      "resolved": "https://registry.npmjs.org/split2/-/split2-4.2.0.tgz",
++      "integrity": "sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==",
++      "license": "ISC",
++      "engines": {
++        "node": ">= 10.x"
++      }
++    },
+     "node_modules/ssf": {
+       "version": "0.11.2",
+       "resolved": "https://registry.npmjs.org/ssf/-/ssf-0.11.2.tgz",
+@@ -1232,6 +1393,15 @@
+       "engines": {
+         "node": ">=0.8"
+       }
++    },
++    "node_modules/xtend": {
++      "version": "4.0.2",
++      "resolved": "https://registry.npmjs.org/xtend/-/xtend-4.0.2.tgz",
++      "integrity": "sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=0.4"
++      }
+     }
+   }
  }
- function permittedPath(method, path) {
-@@ -32,13 +32,13 @@ function permittedPath(method, path) {
-     (method === "POST" && /^\/registrations\/[A-Za-z0-9_-]+\/(invoices\/sync|billing\/cancel|payment-setup)$/.test(path)) ||
-     (method === "DELETE" && /^\/registrations\/[A-Za-z0-9_-]+$/.test(path));
+diff --git a/package.json b/package.json
+index c6814b4..ed7eced 100644
+--- a/package.json
++++ b/package.json
+@@ -6,7 +6,8 @@
+   "scripts": {
+     "start": "node server.js",
+     "build": "npm --prefix frontend install && npm --prefix frontend run build",
+-    "test:sharepoint": "node graph-test.js"
++    "test:sharepoint": "node graph-test.js",
++    "sessions:setup": "node scripts/setup-sessions.cjs"
+   },
+   "keywords": [],
+   "author": "",
+@@ -14,9 +15,14 @@
+   "type": "commonjs",
+   "dependencies": {
+     "@azure/msal-node": "^6.0.1",
++    "connect-pg-simple": "^10.0.0",
+     "dotenv": "^17.4.2",
+     "express": "^5.2.1",
+     "express-session": "^1.19.0",
++    "pg": "^8.23.1",
+     "xlsx": "^0.18.5"
++  },
++  "devDependencies": {
++    "@electric-sql/pglite": "^0.5.9"
+   }
  }
--function signAssertion(secret, req, path, volunteerSuperAdmin = false, fullCsvExport = false) {
-+function signAssertion(secret, req, path, volunteerSuperAdmin = false, fullCsvExport = false, scope = "members") {
-   const now = Math.floor(Date.now() / 1000);
-   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
-   const payload = Buffer.from(JSON.stringify({
-     iss: "trudash", aud: "tcm-membership-admin", sub: req.session.user.username.toLowerCase(),
-     role: "membership_admin", volunteerSuperAdmin,
--    fullCsvExport, iat: now, exp: now + 30, jti: crypto.randomUUID(),
-+    fullCsvExport, scope, iat: now, exp: now + 30, jti: crypto.randomUUID(),
-     method: req.method, path,
-     bodyHash: crypto.createHash("sha256").update(JSON.stringify(req.body || null)).digest("hex"),
-   })).toString("base64url");
-@@ -56,16 +56,35 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } =
-     if (!req.session?.user) return res.status(401).json({ error: "Microsoft sign-in required" });
-     next();
-   });
--  router.get("/config", (req, res) => {
-+  router.get("/config", async (req, res) => {
-     const config = configuration(env);
--    const allowed = config.ready && isMembershipAdmin(config.admins, req.session.user.username)
--    res.json({ enabled: config.enabled, available: Boolean(allowed), registrationUrl: allowed ? config.registrationUrl : null });
-+    const memberAllowed = config.ready && isMembershipAdmin(config.admins, req.session.user.username);
-+    let volunteersAvailable = false;
-+    let volunteerAccessUnavailable = false;
-+    if (config.ready) {
-+      try {
-+        const path = "/api/volunteers/admin/access";
-+        const bootstrap = namedUserAllowed(env.VOLUNTEER_SUPER_ADMIN_EMAILS, req.session.user.username);
-+        const response = await fetchImpl(`${config.backend}${path}`, {
-+          headers: { "x-trudash-assertion": signAssertion(config.secret, req, path, bootstrap, false, "volunteers") },
-+          signal: AbortSignal.timeout(8000), redirect: "error",
-+        });
-+        if (!response.ok) throw new Error("Volunteer permission lookup failed");
-+        const access = await response.json();
-+        volunteersAvailable = access.available === true;
-+      } catch { volunteerAccessUnavailable = true; }
-+    }
-+    res.json({ enabled: config.enabled, available: Boolean(memberAllowed),
-+      volunteersAvailable, volunteerAccessUnavailable,
-+      registrationUrl: memberAllowed || volunteersAvailable ? config.registrationUrl : null });
-   });
-   router.use(async (req, res) => {
-     const config = configuration(env);
-     if (!config.enabled) return res.status(404).json({ error: "Membership pilot is disabled" });
-     if (!config.ready) return res.status(503).json({ error: "Membership pilot is not configured" });
--    if (!isMembershipAdmin(config.admins, req.session.user.username)) return res.status(403).json({ error: "Membership administrator access required" });
-+    const isVolunteerPath = req.path === "/volunteers" || req.path.startsWith("/volunteers/");
-+    const scope = isVolunteerPath ? "volunteers" : req.path.startsWith("/social-posts") ? "social" : "members";
-+    if (!isVolunteerPath && !isMembershipAdmin(config.admins, req.session.user.username)) return res.status(403).json({ error: "Membership administrator access required" });
-     if (!permittedPath(req.method, req.path) || req.url.includes("?")) return res.status(404).json({ error: "Unknown membership action" });
-     if (!["GET", "HEAD"].includes(req.method)) {
-       // Cookie-based Microsoft sessions must not authorize cross-site mutations.
-@@ -87,7 +106,7 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } =
-     try {
-       const response = await fetchImpl(`${config.backend}${upstreamPath}`, {
-         method: req.method,
--        headers: { "Content-Type": "application/json", "x-trudash-assertion": signAssertion(config.secret, req, upstreamPath, volunteerSuperAdmin, fullCsvExport) },
-+        headers: { "Content-Type": "application/json", "x-trudash-assertion": signAssertion(config.secret, req, upstreamPath, volunteerSuperAdmin, fullCsvExport, scope) },
-         ...(["GET", "HEAD"].includes(req.method) ? {} : { body: JSON.stringify(req.body || null) }),
-         signal: AbortSignal.timeout(30000), redirect: "error",
+diff --git a/routes/sessionAdmin.js b/routes/sessionAdmin.js
+new file mode 100644
+index 0000000..e37d1c9
+--- /dev/null
++++ b/routes/sessionAdmin.js
+@@ -0,0 +1,26 @@
++const express=require('express');
++function createSessionAdminRouter({sessions,getApplicationAccess,env=process.env}){
++ const router=express.Router();
++ router.post('/revoke',async(req,res)=>{
++  res.set('Cache-Control','no-store');
++  if(!req.session?.user)return res.status(401).json({error:'Microsoft sign-in required'});
++  let origin;try{origin=new URL(env.APP_BASE_URL).origin;}catch{return res.status(503).json({error:'TruDash origin is not configured'});}
++  if(req.get('origin')!==origin)return res.status(403).json({error:'Invalid request origin'});
++  const email=typeof req.body?.email==='string'?req.body.email.trim().toLowerCase():'';
++  if(!/^[^\s@]+@[^\s@]+$/.test(email)||email.length>200||req.body.confirm!==true)return res.status(400).json({error:'A valid account email and confirmation are required'});
++  try{
++   const access=await getApplicationAccess(req);
++   if(access.superAdmin!==true)return res.status(403).json({error:'Super Admin access required'});
++   const actor=req.session.user.username.toLowerCase();
++   const revokedCount=await sessions.revoke(actor,email);
++   if(actor===email){return req.session.destroy(error=>{
++    sessions.clearCookie(res);
++    if(error)return res.status(503).json({error:'Sessions revoked; refresh to sign in again'});
++    res.json({revokedCount,revokedSelf:true});
++   });}
++   res.json({revokedCount,revokedSelf:false});
++  }catch{return res.status(503).json({error:'Sessions could not be revoked'});}
++ });
++ return router;
++}
++module.exports={createSessionAdminRouter};
+diff --git a/scripts/setup-sessions.cjs b/scripts/setup-sessions.cjs
+new file mode 100644
+index 0000000..d4ea513
+--- /dev/null
++++ b/scripts/setup-sessions.cjs
+@@ -0,0 +1,5 @@
++require('dotenv').config({quiet:true});
++const {Pool}=require('pg');const fs=require('node:fs');const path=require('node:path');
++if(!process.env.SESSION_DATABASE_URL)throw Error('Set SESSION_DATABASE_URL for the intended environment');
++const pool=new Pool({connectionString:process.env.SESSION_DATABASE_URL,connectionTimeoutMillis:5000});
++(async()=>{const db=await pool.connect();try{await db.query('BEGIN');await db.query(fs.readFileSync(path.join(__dirname,'../db/sessions.sql'),'utf8'));await db.query('COMMIT');console.log('TruDash session tables ready');}catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}})().catch(()=>{console.error('Session schema setup failed; check database access and schema permissions');process.exitCode=1;}).finally(()=>pool.end());
+diff --git a/server.js b/server.js
+index d176d00..71b89ae 100644
+--- a/server.js
++++ b/server.js
+@@ -3,7 +3,7 @@ require("dotenv").config();
+ const express = require("express");
+ const path = require("path");
+ 
+-const session = require("express-session");
++const { createSessionInfrastructure } = require("./services/sessionService");
+ const {
+   getPolicyGovernanceSummary,
+   getDocumentCategorySummary,
+@@ -59,19 +59,13 @@ const documentCategories = {
+ };
+ app.set("trust proxy", 1);
+ 
+-app.use(
+-  session({
+-    secret: process.env.SESSION_SECRET,
+-    resave: false,
+-    saveUninitialized: false,
+-    cookie: {
+-      httpOnly: true,
+-      secure: process.env.NODE_ENV === "production",
+-      sameSite: "lax",
+-      maxAge: 8 * 60 * 60 * 1000,
+-    },
+-  })
+-);
++const sessions = createSessionInfrastructure();
++app.use(sessions.middleware);
++app.use((error,req,res,next)=>{
++  if(res.headersSent)return next(error);
++  console.error("Session storage operation failed");
++  res.set("Cache-Control","no-store").status(503).json({error:"Session storage is unavailable"});
++});
+ 
+ app.use(express.json());
+ // Authenticated responses must not be retained by browser or intermediary caches.
+@@ -80,6 +74,18 @@ app.use("/api", (req, res, next) => {
+   next();
+ });
+ 
++// Database-backed validation runs before every authenticated route.
++app.use(sessions.guard);
++app.use("/auth", (req,res,next)=>{res.set("Cache-Control","no-store");next();});
++app.post("/api/auth/activity", requireAuth, (req,res)=>{
++  let origin;
++  try { origin = new URL(process.env.APP_BASE_URL).origin; }
++  catch { return res.status(503).json({error:"TruDash URL is not configured"}); }
++  if(req.get("origin")!==origin)return res.status(403).json({error:"Invalid request origin"});
++  sessions.activity(req,res);
++});
++app.use("/api/admin/sessions", require("./routes/sessionAdmin").createSessionAdminRouter({sessions,getApplicationAccess}));
++
+ app.get("/api/auth/me", (req, res) => {
+   if (!req.session.user) {
+     return res.status(401).json({
+@@ -152,6 +158,7 @@ app.get("/auth/redirect", async (req, res) => {
+       username: tokenResponse.account.username,
+       name: tokenResponse.account.name,
+     };
++    await sessions.establish(req);
+ 
+ req.session.save((error) => {
+   if (error) {
+@@ -184,7 +191,7 @@ app.get("/auth/logout", (req, res) => {
        });
+     }
+ 
+-    res.clearCookie("connect.sid");
++    sessions.clearCookie(res);
+     res.redirect("/");
+   });
+ });
+@@ -470,6 +477,14 @@ app.get("/{*splat}", (req, res) => {
+   res.sendFile(path.join(frontendPath, "index.html"));
+ });
+ 
+-app.listen(PORT, () => {
+-  console.log(`Trudash API running on http://localhost:${PORT}`);
+-});
+\ No newline at end of file
++module.exports = app;
++if (require.main === module) {
++  sessions.start().then(() => {
++    const server = app.listen(PORT, () => console.log(`Trudash API running on port ${PORT}`));
++    process.once("SIGTERM", () => server.close(() => sessions.close().catch(() => {}).finally(() => process.exit(0))));
++  }).catch(async () => {
++    console.error("TruDash could not start: check session database configuration and run npm run sessions:setup");
++    await sessions.close().catch(() => {});
++    process.exitCode = 1;
++  });
++}
+diff --git a/services/sessionService.js b/services/sessionService.js
+new file mode 100644
+index 0000000..dc20b96
+--- /dev/null
++++ b/services/sessionService.js
+@@ -0,0 +1,73 @@
++const session = require('express-session');
++const { Pool } = require('pg');
++const PgStore = require('connect-pg-simple')(session);
++function bounded(value, fallback, min, max, name) {
++ const n=value===undefined ? fallback : Number(value);
++ if(!Number.isInteger(n)||n<min||n>max)throw Error(`Invalid ${name}`);
++ return n;
++}
++function sessionPolicy(env=process.env){return {
++ idleMs:bounded(env.SESSION_IDLE_MINUTES,15,1,120,'SESSION_IDLE_MINUTES')*60000,
++ maxMs:bounded(env.SESSION_MAX_HOURS,8,1,24,'SESSION_MAX_HOURS')*3600000,
++ auditDays:bounded(env.SESSION_AUDIT_RETENTION_DAYS,90,1,365,'SESSION_AUDIT_RETENTION_DAYS'),
++};}
++function expired(auth,now,policy){return !auth||!Number.isFinite(auth.issuedAt)||!Number.isFinite(auth.lastActivityAt)||auth.issuedAt>now||auth.lastActivityAt>now||now-auth.issuedAt>=policy.maxMs||now-auth.lastActivityAt>=policy.idleMs;}
++function createSessionInfrastructure({env=process.env,pool:providedPool,now=Date.now}={}){
++ if(!env.SESSION_SECRET||Buffer.byteLength(env.SESSION_SECRET)<32)throw Error('SESSION_SECRET must contain at least 32 bytes');
++ if(!providedPool&&!env.SESSION_DATABASE_URL)throw Error('SESSION_DATABASE_URL is required; no memory-store fallback');
++ const policy=sessionPolicy(env);
++ const pool=providedPool||new Pool({connectionString:env.SESSION_DATABASE_URL,max:5,connectionTimeoutMillis:5000,idleTimeoutMillis:30000});
++ pool.on?.('error',()=>console.error('Session database connection error'));
++ const store=new PgStore({pool,schemaName:'trudash_auth',tableName:'sessions',createTableIfMissing:false,disableTouch:true,pruneSessionInterval:false,errorLog:()=>console.error('Session store operation failed')});
++ const cookieName='trudash.sid';
++ const cookieOptions={httpOnly:true,secure:env.NODE_ENV==='production',sameSite:'lax',path:'/'};
++ const middleware=session({name:cookieName,secret:env.SESSION_SECRET,store,resave:false,saveUninitialized:false,rolling:false,cookie:{...cookieOptions,maxAge:10*60000}});
++ async function epoch(username,db=pool){const result=await db.query('SELECT epoch FROM trudash_auth.revocations WHERE username=$1',[username.toLowerCase()]);return String(result.rows[0]?.epoch||'0');}
++ function remaining(auth){return Math.max(1,Math.min(policy.maxMs-(now()-auth.issuedAt),policy.idleMs-(now()-auth.lastActivityAt)));}
++ async function establish(req){const time=now();req.session.auth={issuedAt:time,lastActivityAt:time,epoch:await epoch(req.session.user.username)};req.session.cookie.maxAge=remaining(req.session.auth);}
++ function clearCookie(res){res.clearCookie(cookieName,cookieOptions);}
++ async function guard(req,res,next){
++  if(!req.session?.user)return next();
++  try{
++   const invalid=expired(req.session.auth,now(),policy)||String(req.session.auth.epoch)!==await epoch(req.session.user.username);
++   if(invalid)return req.session.destroy(error=>{
++    if(error)return res.status(503).json({error:'Session could not be ended'});
++    clearCookie(res);
++    if(req.path.startsWith('/api/'))return res.status(401).json({authenticated:false,error:'Session expired or revoked. Sign in again.'});
++    return res.redirect('/auth/login');
++   });
++   req.session.cookie.maxAge=remaining(req.session.auth);
++   next();
++  }catch{return res.status(503).json({error:'Session verification is unavailable'});}
++ }
++ function activity(req,res){
++  if(!req.session?.user||expired(req.session.auth,now(),policy))return res.status(401).json({error:'Sign in again'});
++  req.session.auth.lastActivityAt=now();req.session.cookie.maxAge=remaining(req.session.auth);
++  req.session.save(error=>error?res.status(503).json({error:'Session activity could not be saved'}):res.sendStatus(204));
++ }
++ async function revoke(actor,target){
++  const client=await pool.connect();
++  try{
++   await client.query('BEGIN');
++   await client.query('INSERT INTO trudash_auth.revocations(username,epoch) VALUES($1,1) ON CONFLICT(username) DO UPDATE SET epoch=trudash_auth.revocations.epoch+1,updated_at=CURRENT_TIMESTAMP',[target]);
++   const removed=await client.query("DELETE FROM trudash_auth.sessions WHERE lower(sess->'user'->>'username')=$1",[target]);
++   await client.query("INSERT INTO trudash_auth.session_audit(actor,target,action,session_count) VALUES($1,$2,'SESSIONS_REVOKED',$3)",[actor,target,removed.rowCount]);
++   await client.query('COMMIT');return removed.rowCount;
++  }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
++ }
++ async function cleanup(){
++  await new Promise((resolve,reject)=>store.pruneSessions(error=>error?reject(error):resolve()));
++  await pool.query("DELETE FROM trudash_auth.session_audit WHERE created_at < CURRENT_TIMESTAMP - ($1 * INTERVAL '1 day')",[policy.auditDays]);
++  await pool.query("DELETE FROM trudash_auth.revocations r WHERE updated_at < CURRENT_TIMESTAMP - INTERVAL '2 days' AND NOT EXISTS (SELECT 1 FROM trudash_auth.sessions s WHERE lower(s.sess->'user'->>'username')=r.username AND s.expire > CURRENT_TIMESTAMP)");
++ }
++ let timer;
++ async function start(){
++  await pool.query('SELECT sid FROM trudash_auth.sessions LIMIT 0');
++  await pool.query('SELECT username FROM trudash_auth.revocations LIMIT 0');
++  await pool.query('SELECT id FROM trudash_auth.session_audit LIMIT 0');
++  await cleanup();timer=setInterval(()=>cleanup().catch(()=>console.error('Session cleanup failed')),15*60000);timer.unref();
++ }
++ async function close(){clearInterval(timer);await store.close();if(!providedPool)await pool.end();}
++ return {middleware,guard,establish,activity,revoke,cleanup,start,close,clearCookie,policy,pool,store};
++}
++module.exports={createSessionInfrastructure,sessionPolicy,expired};
 diff --git a/tests/collectionEndpoint.test.cjs b/tests/collectionEndpoint.test.cjs
 new file mode 100644
-index 0000000..d62e7dc
+index 0000000..bafaaa3
 --- /dev/null
 +++ b/tests/collectionEndpoint.test.cjs
-@@ -0,0 +1,41 @@
+@@ -0,0 +1,44 @@
 +const test = require('node:test');
 +const assert = require('node:assert/strict');
 +const vm = require('node:vm');
@@ -148,15 +583,18 @@ index 0000000..d62e7dc
 + const env={TRUDASH_FINANCE_ADMIN_EMAILS:'treasurer@wwfc.org.uk'};
 + const source=fs.readFileSync(path.join(__dirname,'../server.js'),'utf8');
 + vm.runInNewContext(source,{
-+  __dirname:path.join(__dirname,'..'),process:{env},console:{log(){},error(){}},Buffer,URL,Promise,
++  module:{exports:{}},__dirname:path.join(__dirname,'..'),process:{env},console:{log(){},error(){}},Buffer,URL,Promise,
 +  require(name){
 +   if(name==='dotenv')return {config(){}};
++   if(name==='./services/sessionService')return {createSessionInfrastructure:()=>({middleware:(req,res,next)=>{req.session=req.headers['x-test-user']?{user:{username:req.headers['x-test-user']}}:{};next();},guard:(req,res,next)=>next()})};
++   if(name==='./routes/sessionAdmin')return require('../routes/sessionAdmin');
 +   if(name==='express'){
 +    const factory=()=>{app=express();app.listen=()=>{};return app;};
 +    factory.json=express.json;factory.static=express.static;return factory;
 +   }
 +   if(name==='express-session')return ()=> (req,res,next)=>{req.session=req.headers['x-test-user']?{user:{username:req.headers['x-test-user']}}:{};next();};
 +   if(name==='./services/sharepointService')return {getTeamFeePayCollectionSummary:async()=>input};
++   if(name==='./services/applicationAccess')return {getApplicationAccess:async req=>({permissions: env.TRUDASH_FINANCE_ADMIN_EMAILS===req.session.user.username?['FINANCE_DETAILS']:[]})};
 +   if(name==='./services/privacyAccess')return privacy;
 +   if(name==='./services/loginFlow')return require('../services/loginFlow');
 +   if(name==='./services/authService')return {};
@@ -235,59 +673,97 @@ index 0000000..27d97b4
 + assert.equal(finance.overdueMembers[0].firstName,'Child');
 + assert.equal(Object.hasOwn(finance.overdueMembers[0],'email'),false);
 +});
-diff --git a/tests/roleSplit.test.cjs b/tests/roleSplit.test.cjs
+diff --git a/tests/sessions.test.cjs b/tests/sessions.test.cjs
 new file mode 100644
-index 0000000..aacf92e
+index 0000000..5cb92ce
 --- /dev/null
-+++ b/tests/roleSplit.test.cjs
-@@ -0,0 +1,50 @@
-+const test=require('node:test');
++++ b/tests/sessions.test.cjs
+@@ -0,0 +1,88 @@
++const {test,before,after}=require('node:test');
 +const assert=require('node:assert/strict');
-+const fs=require('node:fs');
-+const vm=require('node:vm');
-+const path=require('node:path');
-+const {createRequire}=require('node:module');
++const fs=require('node:fs');const path=require('node:path');
 +const express=require('express');
-+const crypto=require('node:crypto');
-+const {createMembershipPilotRouter}=require('../routes/membershipPilot');
-+// Cross-repository integration: override only the checkout location locally.
-+const tcm=process.env.TCM_TEST_ROOT || path.resolve(__dirname,'../../TotalClubManagement');
-+const backendRequire=createRequire(path.join(tcm,'backend/package.json'));
-+const jwt=backendRequire('jsonwebtoken');
-+const secret='test-only-role-split-'.repeat(4);
-+process.env.TRUDASH_MEMBERSHIP_SHARED_SECRET=secret;
-+process.env.TRUDASH_ONLY_ADMIN_AUTH='true';
-+process.env.FRONTEND_URL='https://register.example';
-+function load(relative,dependencies){const mod={exports:{}};vm.runInNewContext(fs.readFileSync(path.join(tcm,relative),'utf8'),{module:mod,exports:mod.exports,require:name=> name in dependencies?dependencies[name]:backendRequire(name),process,console:{error(){}},Buffer,URL,Date,Map});return mod.exports;}
-+async function fixture(t){
-+ const people=new Map();let reads=0;const changes=[];
-+ const db={clubVolunteer:{findUnique:async({where})=>[...people.values()].find(v=>where.email?v.email===where.email:v.id===where.id)||null,findMany:async()=>{reads++;return [...people.values()]},update:async({where,data})=>{const v=people.get(where.id);Object.assign(v,data);return v;}},volunteerChange:{create:async args=>changes.push(args)}};
-+ db.$transaction=async fn=>fn(db);
-+ const service=load('backend/src/services/volunteerService.js',{'../prisma':db,'../content/volunteerAgreements.json':JSON.parse(fs.readFileSync(path.join(tcm,'backend/src/content/volunteerAgreements.json')))});
-+ function person(id,accessRole='NONE',status='ACTIVE',accepted=true){const v={id,email:id+'@wwfc.org.uk',firstName:id,lastName:'Test',phone:'01234567890',team:null,assignedRoles:['Trustee'],requestedRoles:['Trustee'],status,accessRole,notes:'',createdAt:new Date(),updatedAt:new Date(),acceptances:accepted?service.agreements().filter(d=>d.key==='VOLUNTEER').map(d=>({agreement:d.key,version:d.version,content:d.content,acceptedAt:new Date()})):[]};people.set(id,v);return v;}
-+ person('member');person('admin','ADMIN');person('super','SUPER_ADMIN');person('none');person('inactive','ADMIN','INACTIVE');person('unsigned','ADMIN','ACTIVE',false);person('target');
-+ const verify=backendRequire(path.join(tcm,'backend/src/middleware/trudashAdmin'));
-+ const volunteers=load('backend/src/routes/volunteers.js',{'../services/volunteerService':service,'../middleware/trudashAdmin':verify});
-+ const app=express();app.use(express.json());app.use('/api/volunteers',volunteers);
-+ // Real bridge verifier also enforces the member scope, without querying member data.
-+ app.get('/api/admin/members',(req,res)=>{if(verify.verifyTrudashAdmin(req,res))res.json({members:[{id:'member1'}]});});
-+ const backend=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
-+ t.after(()=>new Promise(resolve=>backend.close(resolve)));
-+ const bridge=express();bridge.use(express.json());bridge.use((req,res,next)=>{req.session={user:{username:req.get('x-test-user')||'none@wwfc.org.uk'}};next();});
-+ const env={MEMBERSHIP_PILOT_ENABLED:'true',MEMBERSHIP_PILOT_ADMIN_EMAILS:'member@wwfc.org.uk',TCM_BACKEND_URL:`http://127.0.0.1:${backend.address().port}`,TCM_REGISTRATION_URL:'https://register.example',TRUDASH_MEMBERSHIP_SHARED_SECRET:secret,VOLUNTEER_SUPER_ADMIN_EMAILS:'bootstrap@wwfc.org.uk',APP_BASE_URL:'https://trudash.example'};
-+ bridge.use('/api/membership-pilot',createMembershipPilotRouter({env}));
-+ const server=await new Promise(resolve=>{const s=bridge.listen(0,'127.0.0.1',()=>resolve(s));});t.after(()=>new Promise(resolve=>server.close(resolve)));
-+ const root=`http://127.0.0.1:${server.address().port}/api/membership-pilot`;
-+ async function call(user,route='/volunteers',method='GET',data){return fetch(root+route,{method,headers:{'x-test-user':user+'@wwfc.org.uk',Origin:env.APP_BASE_URL,'Content-Type':'application/json'},...(data?{body:JSON.stringify(data)}:{})});}
-+ return {call,people,person,env,db,reads:()=>reads,changes,backendUrl:`http://127.0.0.1:${backend.address().port}`};
++const {PGlite}=require('@electric-sql/pglite');
++const {createSessionInfrastructure,sessionPolicy,expired}=require('../services/sessionService');
++const {createSessionAdminRouter}=require('../routes/sessionAdmin');
++let db;
++before(async()=>{db=new PGlite();await db.exec(fs.readFileSync(path.join(__dirname,'../db/sessions.sql'),'utf8'));});
++after(async()=>{await db.close();});
++function poolAdapter(){return {on(){},async query(sql,params=[]){const result=await db.query(sql,params.map(p=>p&&typeof p==='object'&&!(p instanceof Date)?JSON.stringify(p):p));return {rows:result.rows,rowCount:result.affectedRows||0};},async connect(){return {...this,release(){}};}};}
++const env={SESSION_SECRET:'local-test-secret-'.repeat(4),APP_BASE_URL:'https://trudash.example',SESSION_IDLE_MINUTES:'15',SESSION_MAX_HOURS:'8'};
++async function fixture(t,{reset=true,production=false}={}){
++ if(reset)await db.exec('TRUNCATE trudash_auth.sessions,trudash_auth.revocations,trudash_auth.session_audit');
++ let offset=0;const clock=()=>Date.now()+offset;const pool=poolAdapter();
++ const infra=createSessionInfrastructure({env:{...env,NODE_ENV:production?'production':'development'},pool,now:clock});await infra.start();
++ const app=express();if(production)app.set('trust proxy',1);app.use(express.json());app.use(infra.middleware);app.use(infra.guard);
++ app.post('/login',async(req,res)=>{req.session.user={username:req.body.username};await infra.establish(req);req.session.save(err=>err?res.sendStatus(500):res.json({sid:req.sessionID}));});
++ app.get('/api/private',(req,res)=>req.session.user?res.json({username:req.session.user.username}):res.sendStatus(401));
++ app.post('/api/auth/activity',(req,res)=>infra.activity(req,res));
++ app.use('/api/admin/sessions',createSessionAdminRouter({sessions:infra,env,getApplicationAccess:async req=>({superAdmin:req.session.user?.username==='chair@wwfc.org.uk'})}));
++ const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
++ t.after(async()=>{await new Promise(resolve=>server.close(resolve));await infra.close();});
++ const url=`http://127.0.0.1:${server.address().port}`;
++ async function login(username='magic@wwfc.org.uk'){const r=await fetch(url+'/login',{method:'POST',headers:{'Content-Type':'application/json','X-Forwarded-Proto':'https'},body:JSON.stringify({username})});const cookie=r.headers.get('set-cookie');return {cookie:cookie.split(';')[0],header:cookie,...await r.json()};}
++ async function call(route,cookie,method='GET',body,origin=env.APP_BASE_URL){return fetch(url+route,{method,headers:{Cookie:cookie||'',Origin:origin,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});}
++ return {infra,pool,login,call,advance:ms=>{offset+=ms;}};
 +}
-+test('member admin has members but no volunteer directory or volunteer menu',async t=>{const f=await fixture(t);assert.equal((await f.call('member','/members')).status,200);assert.equal((await f.call('member')).status,403);assert.equal(f.reads(),0);const c=await(await f.call('member','/config')).json();assert.equal(c.available,true);assert.equal(c.volunteersAvailable,false);});
-+test('volunteer admin and super admin have directory without member permission',async t=>{const f=await fixture(t);for(const user of ['admin','super','bootstrap']){const c=await(await f.call(user,'/config')).json();assert.equal(c.available,false);assert.equal(c.volunteersAvailable,true);assert.equal((await f.call(user)).status,200);assert.equal((await f.call(user,'/members')).status,403);}const data=await(await f.call('admin')).json();assert.equal(data.superAdmin,false);assert.equal((await(await f.call('bootstrap')).json()).superAdmin,true);});
-+test('none, inactive and missing agreements fail closed before directory queries',async t=>{const f=await fixture(t);for(const user of ['none','inactive','unsigned']){assert.equal((await f.call(user)).status,403);assert.equal((await(await f.call(user,'/config')).json()).volunteersAvailable,false);}assert.equal(f.reads(),0);});
-+test('revocation takes effect on next request, without signing out',async t=>{const f=await fixture(t);assert.equal((await f.call('admin')).status,200);f.people.get('admin').accessRole='NONE';assert.equal((await f.call('admin')).status,403);});
-+test('admin cannot grant access or edit super admin; super admin can grant then revoke',async t=>{const f=await fixture(t);const v=f.people.get('target');const update={updatedAt:v.updatedAt.toISOString(),assignedRoles:['Trustee'],status:'ACTIVE',notes:'',accessRole:'ADMIN'};assert.equal((await f.call('admin','/volunteers/target','PATCH',update)).status,403);assert.equal(v.accessRole,'NONE');assert.equal((await f.call('super','/volunteers/target','PATCH',update)).status,200);assert.equal((await f.call('target')).status,200);assert.equal((await f.call('super','/volunteers/target','PATCH',{...update,accessRole:'NONE'})).status,200);assert.equal((await f.call('target')).status,403);assert.equal(f.changes.length,2);const s=f.people.get('super');assert.equal((await f.call('admin','/volunteers/super','PATCH',{...update,updatedAt:s.updatedAt.toISOString(),accessRole:'SUPER_ADMIN'})).status,403);assert.equal((await f.call('admin','/volunteers/super/acceptance-link','POST',{})).status,403);});
-+test('signed volunteer assertion cannot be reused as member authority',async t=>{const f=await fixture(t);const route='/api/admin/members';const token=jwt.sign({sub:'admin@wwfc.org.uk',role:'membership_admin',scope:'volunteers',method:'GET',path:route,bodyHash:crypto.createHash('sha256').update('null').digest('hex'),jti:crypto.randomUUID()},secret,{issuer:'trudash',audience:'tcm-membership-admin',expiresIn:30});assert.equal((await fetch(f.backendUrl+route,{headers:{'x-trudash-assertion':token}})).status,401);});
++test('persistent session is readable from another app instance and after first store closes',async t=>{
++ const a=await fixture(t);const login=await a.login();assert.match(login.header,/HttpOnly/);assert.match(login.header,/SameSite=Lax/);assert.match(login.header,/trudash.sid=/);
++ const b=await fixture(t,{reset:false});assert.equal((await b.call('/api/private',login.cookie)).status,200);await a.infra.close();assert.equal((await b.call('/api/private',login.cookie)).status,200);
++});
++test('idle expiry is enforced by backend and polling does not extend it',async t=>{
++ const f=await fixture(t);const u=await f.login();f.advance(14*60000);assert.equal((await f.call('/api/private',u.cookie)).status,200);f.advance(60000+1);const r=await f.call('/api/private',u.cookie);assert.equal(r.status,401);assert.match(r.headers.get('set-cookie'),/Expires=Thu, 01 Jan 1970/);
++});
++test('explicit activity refreshes idle lifetime but not maximum lifetime',async t=>{
++ const f=await fixture(t);const u=await f.login();f.advance(14*60000);assert.equal((await f.call('/api/auth/activity',u.cookie,'POST')).status,204);f.advance(14*60000);assert.equal((await f.call('/api/private',u.cookie)).status,200);
++ const result=await f.pool.query('SELECT sess FROM trudash_auth.sessions WHERE sid=$1',[u.sid]);const stored=result.rows[0].sess;stored.auth.issuedAt=Date.now()-8*3600000;stored.auth.lastActivityAt=Date.now()+28*60000;await new Promise((resolve,reject)=>f.infra.store.set(u.sid,stored,e=>e?reject(e):resolve()));
++ assert.equal((await f.call('/api/private',u.cookie)).status,401);
++});
++test('revocation rejects even a stale session written back by an in-flight request',async t=>{
++ const f=await fixture(t);const u=await f.login();const snapshot=await new Promise((resolve,reject)=>f.infra.store.get(u.sid,(e,s)=>e?reject(e):resolve(s)));
++ assert.equal(await f.infra.revoke('chair@wwfc.org.uk','magic@wwfc.org.uk'),1);
++ await new Promise((resolve,reject)=>f.infra.store.set(u.sid,snapshot,e=>e?reject(e):resolve()));
++ assert.equal((await f.call('/api/private',u.cookie)).status,401);
++ const audit=await f.pool.query('SELECT actor,target,action FROM trudash_auth.session_audit');assert.equal(audit.rows[0].actor,'chair@wwfc.org.uk');assert.equal(audit.rows[0].action,'SESSIONS_REVOKED');
++ const fresh=await f.login();assert.equal((await f.call('/api/private',fresh.cookie)).status,200);
++});
++test('only Super Admin with same-origin confirmation can revoke sessions',async t=>{
++ const f=await fixture(t);const user=await f.login();const chair=await f.login('chair@wwfc.org.uk');const body={email:'magic@wwfc.org.uk',confirm:true};
++ assert.equal((await f.call('/api/admin/sessions/revoke',undefined,'POST',body)).status,401);
++ assert.equal((await f.call('/api/admin/sessions/revoke',user.cookie,'POST',body)).status,403);
++ assert.equal((await f.call('/api/admin/sessions/revoke',chair.cookie,'POST',body,'https://attacker.example')).status,403);
++ assert.equal((await f.call('/api/admin/sessions/revoke',chair.cookie,'POST',{email:body.email})).status,400);
++ assert.equal((await f.call('/api/admin/sessions/revoke',chair.cookie,'POST',body)).status,200);
++ assert.equal((await f.call('/api/private',user.cookie)).status,401);assert.equal((await f.call('/api/private',chair.cookie)).status,200);
++});
++test('audit failure rolls back revocation without deleting sessions',async t=>{
++ const f=await fixture(t);const u=await f.login();await db.exec('ALTER TABLE trudash_auth.session_audit RENAME TO audit_hidden');
++ try{await assert.rejects(f.infra.revoke('chair@wwfc.org.uk','magic@wwfc.org.uk'));assert.equal((await f.call('/api/private',u.cookie)).status,200);}finally{await db.exec('ALTER TABLE trudash_auth.audit_hidden RENAME TO session_audit');}
++});
++test('cleanup deletes expired sessions and old audit records',async t=>{
++ const f=await fixture(t);await f.pool.query('INSERT INTO trudash_auth.sessions(sid,sess,expire) VALUES($1,$2,CURRENT_TIMESTAMP-INTERVAL \'1 day\')',['expired',{}]);
++ await f.pool.query("INSERT INTO trudash_auth.session_audit(actor,target,action,session_count,created_at) VALUES('a','b','SESSIONS_REVOKED',0,CURRENT_TIMESTAMP-INTERVAL '100 days')");
++ await f.infra.cleanup();
++ await new Promise((resolve,reject)=>f.infra.store.pruneSessions(e=>e?reject(e):resolve()));
++ assert.equal((await f.pool.query('SELECT sid FROM trudash_auth.sessions')).rows.length,0);
++ assert.equal((await f.pool.query('SELECT id FROM trudash_auth.session_audit')).rows.length,0);
++});
++test('database failure returns 503 instead of accepting an unverified session',async t=>{
++ const f=await fixture(t);const u=await f.login();await db.exec('ALTER TABLE trudash_auth.revocations RENAME TO revocations_hidden');
++ try{assert.equal((await f.call('/api/private',u.cookie)).status,503);}finally{await db.exec('ALTER TABLE trudash_auth.revocations_hidden RENAME TO revocations');}
++});
++test('configuration rejects missing database, weak secret and invalid limits',()=>{
++ assert.throws(()=>createSessionInfrastructure({env:{SESSION_SECRET:'x'.repeat(40)}}),/DATABASE/);
++ assert.throws(()=>createSessionInfrastructure({env:{SESSION_SECRET:'short'}}),/SECRET/);
++ assert.throws(()=>sessionPolicy({SESSION_IDLE_MINUTES:'0'}),/IDLE/);
++ assert.equal(expired({issuedAt:0,lastActivityAt:0},15*60000,sessionPolicy({})),true);
++});
 +
-+test('volunteer bootstrap works even without any member administrator list',async t=>{const f=await fixture(t);f.env.MEMBERSHIP_PILOT_ADMIN_EMAILS='';const config=await(await f.call('bootstrap','/config')).json();assert.equal(config.volunteersAvailable,true);assert.equal(config.available,false);assert.equal((await f.call('bootstrap')).status,200);assert.equal((await f.call('bootstrap','/members')).status,403);});
-+test('permission lookup failure does not grant volunteer access or hide valid member access',async t=>{const f=await fixture(t);f.db.clubVolunteer.findUnique=async()=>{throw Error('database unavailable')};const config=await(await f.call('member','/config')).json();assert.equal(config.available,true);assert.equal(config.volunteersAvailable,false);assert.equal(config.volunteerAccessUnavailable,true);assert.equal((await f.call('admin')).status,503);assert.equal(f.reads(),0);});
-+test('None cannot mutate roles or generate acceptance links directly',async t=>{const f=await fixture(t);assert.equal((await f.call('none','/volunteers/target','PATCH',{})).status,403);assert.equal((await f.call('none','/volunteers/target/acceptance-link','POST',{})).status,403);assert.equal(f.changes.length,0);});
++test('self-revocation ends the current login and clears its cookie',async t=>{
++ const f=await fixture(t);const chair=await f.login('chair@wwfc.org.uk');const response=await f.call('/api/admin/sessions/revoke',chair.cookie,'POST',{email:'chair@wwfc.org.uk',confirm:true});assert.equal(response.status,200);assert.equal((await response.json()).revokedSelf,true);assert.match(response.headers.get('set-cookie'),/Expires=Thu, 01 Jan 1970/);assert.equal((await f.call('/api/private',chair.cookie)).status,401);
++});
++test('session schema setup is safe to repeat',async()=>{await db.exec(fs.readFileSync(path.join(__dirname,'../db/sessions.sql'),'utf8'));});
++
++test('production session cookies require HTTPS and retain HttpOnly and SameSite controls',async t=>{
++ const f=await fixture(t,{production:true});const login=await f.login();assert.match(login.header,/Secure/);assert.match(login.header,/HttpOnly/);assert.match(login.header,/SameSite=Lax/);
++});

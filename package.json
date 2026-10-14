@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "build": "npm --prefix frontend install && npm --prefix frontend run build",
-    "test:sharepoint": "node graph-test.js"
+    "test:sharepoint": "node graph-test.js",
+    "sessions:setup": "node scripts/setup-sessions.cjs"
   },
   "keywords": [],
   "author": "",
@@ -14,9 +15,14 @@
   "type": "commonjs",
   "dependencies": {
     "@azure/msal-node": "^6.0.1",
+    "connect-pg-simple": "^10.0.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
+    "pg": "^8.23.1",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.9"
   }
 }

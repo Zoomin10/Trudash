@@ -89,6 +89,27 @@ const [auth, setAuth] = useState({
   user: null,
 });
 
+// Only real interaction extends idle expiry; background fetches do not.
+useEffect(() => {
+  if (!auth.authenticated) return;
+  let lastSent = 0;
+  let stopped = false;
+  const activity = () => {
+    if (document.visibilityState !== "visible" || Date.now() - lastSent < 30000) return;
+    lastSent = Date.now();
+    fetch("/api/auth/activity", {method:"POST",credentials:"include"})
+      .then(response => {
+        if (!stopped && response.status === 401) {
+          setAuth({loading:false,authenticated:false,user:null});
+          setMembershipPilot(null);
+        }
+      }).catch(() => {});
+  };
+  const events = ["pointerdown", "keydown", "scroll", "touchstart"];
+  events.forEach(event => window.addEventListener(event, activity, {passive:true}));
+  return () => { stopped = true; events.forEach(event => window.removeEventListener(event, activity)); };
+}, [auth.authenticated]);
+
 useEffect(() => {
   if (!auth.authenticated) return;
   let cancelled = false;

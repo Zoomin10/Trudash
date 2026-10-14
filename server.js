@@ -3,7 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const path = require("path");
 
-const session = require("express-session");
+const { createSessionInfrastructure } = require("./services/sessionService");
 const {
   getPolicyGovernanceSummary,
   getDocumentCategorySummary,
@@ -16,8 +16,9 @@ const {
   getTeamFeePayVolunteerSummary,
   inspectTeamFeePayAgreementReport,
 } = require("./services/sharepointService");
-const { namedUserAllowed, agreementAnalytics, complaintAnalytics, collectionResponse } = require("./services/privacyAccess");
+const { agreementAnalytics, complaintAnalytics, collectionResponse } = require("./services/privacyAccess");
 const { createLoginAttempt, consumeLoginAttempt } = require("./services/loginFlow");
+const { getApplicationAccess } = require("./services/applicationAccess");
 const app = express();
 const PORT = process.env.PORT || 3001;
 const {
@@ -58,19 +59,13 @@ const documentCategories = {
 };
 app.set("trust proxy", 1);
 
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 8 * 60 * 60 * 1000,
-    },
-  })
-);
+const sessions = createSessionInfrastructure();
+app.use(sessions.middleware);
+app.use((error,req,res,next)=>{
+  if(res.headersSent)return next(error);
+  console.error("Session storage operation failed");
+  res.set("Cache-Control","no-store").status(503).json({error:"Session storage is unavailable"});
+});
 
 app.use(express.json());
 // Authenticated responses must not be retained by browser or intermediary caches.
@@ -78,6 +73,18 @@ app.use("/api", (req, res, next) => {
   res.set("Cache-Control", "no-store");
   next();
 });
+
+// Database-backed validation runs before every authenticated route.
+app.use(sessions.guard);
+app.use("/auth", (req,res,next)=>{res.set("Cache-Control","no-store");next();});
+app.post("/api/auth/activity", requireAuth, (req,res)=>{
+  let origin;
+  try { origin = new URL(process.env.APP_BASE_URL).origin; }
+  catch { return res.status(503).json({error:"TruDash URL is not configured"}); }
+  if(req.get("origin")!==origin)return res.status(403).json({error:"Invalid request origin"});
+  sessions.activity(req,res);
+});
+app.use("/api/admin/sessions", require("./routes/sessionAdmin").createSessionAdminRouter({sessions,getApplicationAccess}));
 
 app.get("/api/auth/me", (req, res) => {
   if (!req.session.user) {
@@ -151,6 +158,7 @@ app.get("/auth/redirect", async (req, res) => {
       username: tokenResponse.account.username,
       name: tokenResponse.account.name,
     };
+    await sessions.establish(req);
 
 req.session.save((error) => {
   if (error) {
@@ -183,7 +191,7 @@ app.get("/auth/logout", (req, res) => {
       });
     }
 
-    res.clearCookie("connect.sid");
+    sessions.clearCookie(res);
     res.redirect("/");
   });
 });
@@ -381,9 +389,8 @@ app.get(
       const summary =
         await getTeamFeePayCollectionSummary();
 
-      const canViewDetails = namedUserAllowed(
-        process.env.TRUDASH_FINANCE_ADMIN_EMAILS, req.session.user.username
-      );
+      const access = await getApplicationAccess(req);
+      const canViewDetails = access.permissions.includes("FINANCE_DETAILS");
       res.json(collectionResponse(summary, canViewDetails));
     } catch (error) {
       console.error(
@@ -400,7 +407,10 @@ app.get(
 );
 
 app.get("/api/members/reports", requireAuth, async (req, res) => {
-  if (!namedUserAllowed(process.env.TRUDASH_REPORT_ADMIN_EMAILS, req.session.user.username)) {
+  let access;
+  try { access = await getApplicationAccess(req); }
+  catch { return res.status(503).json({error:"Application permissions could not be checked"}); }
+  if (!access.permissions.includes("SOURCE_REPORTS")) {
     return res.status(403).json({ error: "Source report administrator access required" });
   }
   try {
@@ -442,7 +452,8 @@ app.get(
   async (req, res) => {
     try {
       const summary = await getComplaintsSummary();
-      const permitted = namedUserAllowed(process.env.TRUDASH_WELFARE_ADMIN_EMAILS, req.session.user.username);
+      const access = await getApplicationAccess(req);
+      const permitted = access.permissions.includes("WELFARE_DETAILS");
       res.json(permitted ? summary : complaintAnalytics(summary));
     } catch (error) {
       console.error(
@@ -466,6 +477,14 @@ app.get("/{*splat}", (req, res) => {
   res.sendFile(path.join(frontendPath, "index.html"));
 });
 
-app.listen(PORT, () => {
-  console.log(`Trudash API running on http://localhost:${PORT}`);
-});
+module.exports = app;
+if (require.main === module) {
+  sessions.start().then(() => {
+    const server = app.listen(PORT, () => console.log(`Trudash API running on port ${PORT}`));
+    process.once("SIGTERM", () => server.close(() => sessions.close().catch(() => {}).finally(() => process.exit(0))));
+  }).catch(async () => {
+    console.error("TruDash could not start: check session database configuration and run npm run sessions:setup");
+    await sessions.close().catch(() => {});
+    process.exitCode = 1;
+  });
+}
