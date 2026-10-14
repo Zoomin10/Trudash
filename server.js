@@ -138,6 +138,7 @@ app.get("/auth/redirect", async (req, res) => {
       code: req.query.code,
       scopes: authCodeUrlParameters.scopes,
       redirectUri,
+        nonce: attempt.nonce,
     });
 
     if (tokenResponse.idTokenClaims?.nonce !== attempt.nonce || !tokenResponse.account?.username) {
