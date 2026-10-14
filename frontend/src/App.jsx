@@ -1140,12 +1140,12 @@ if (!auth.authenticated) {
 
   {/* Club Overdue */}
 <div
-  className="module-card clickable-card"
-  onClick={() => setShowOverdueModal(true)}
-  role="button"
-  tabIndex={0}
+  className={`module-card ${collectionSummary.canViewOverdueDetails ? "clickable-card" : ""}`}
+  onClick={() => { if (collectionSummary.canViewOverdueDetails) setShowOverdueModal(true); }}
+  role={collectionSummary.canViewOverdueDetails ? "button" : undefined}
+  tabIndex={collectionSummary.canViewOverdueDetails ? 0 : undefined}
   onKeyDown={(e) => {
-    if (e.key === "Enter" || e.key === " ") {
+    if (collectionSummary.canViewOverdueDetails && (e.key === "Enter" || e.key === " ")) {
       setShowOverdueModal(true);
     }
   }}
@@ -1159,7 +1159,9 @@ if (!auth.authenticated) {
   </div>
 
  <div className="module-description overdue-link">
-     View {collectionSummary.overdueMembers.length} overdue members →
+     {collectionSummary.canViewOverdueDetails
+       ? `View ${collectionSummary.overdueMembers?.length || 0} overdue members →`
+       : "Individual payment details are restricted to authorised finance users."}
   </div>
 </div>
 
@@ -1238,7 +1240,7 @@ if (!auth.authenticated) {
 
 {/* Overdue Collections Modal */}
 
-  {showOverdueModal && (
+  {showOverdueModal && collectionSummary?.canViewOverdueDetails && (
   <div
     className="modal-overlay"
     onClick={() => setShowOverdueModal(false)}

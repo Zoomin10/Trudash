@@ -21,3 +21,28 @@ function complaintAnalytics(summary) {
   return { openComplaints: summary.openComplaints, detailsRestricted: true };
 }
 module.exports = { namedUserAllowed, agreementAnalytics, complaintAnalytics };
+
+// Never forward workbook-derived objects wholesale to summary viewers.
+function collectionResponse(summary, canViewDetails = false) {
+  const result = {};
+  for (const key of ['collectionRate', 'totalCollections', 'totalPayableCollections',
+    'successfulCollections', 'failedCollections', 'pausedMemberships',
+    'totalPaidByUsers', 'totalDueToClub', 'totalOverdue', 'totalClubCollected']) {
+    result[key] = summary[key];
+  }
+  result.months = (summary.months || []).map(month => {
+    const output = {};
+    for (const key of ['month', 'collections', 'payableCollections', 'successful',
+      'failed', 'collectionRate', 'paidByUsers', 'dueToClub', 'overdue', 'clubCollected']) output[key] = month[key];
+    return output;
+  });
+  result.canViewOverdueDetails = canViewDetails;
+  if (canViewDetails) {
+    result.overdueMembers = (summary.overdueMembers || []).map(member => ({
+      firstName: member.firstName, lastName: member.lastName, teams: member.teams,
+      amountDue: member.amountDue, clubOverdue: member.clubOverdue, status: member.status,
+    }));
+  }
+  return result;
+}
+module.exports.collectionResponse = collectionResponse;

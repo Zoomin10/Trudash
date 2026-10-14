@@ -16,7 +16,7 @@ const {
   getTeamFeePayVolunteerSummary,
   inspectTeamFeePayAgreementReport,
 } = require("./services/sharepointService");
-const { namedUserAllowed, agreementAnalytics, complaintAnalytics } = require("./services/privacyAccess");
+const { namedUserAllowed, agreementAnalytics, complaintAnalytics, collectionResponse } = require("./services/privacyAccess");
 const { createLoginAttempt, consumeLoginAttempt } = require("./services/loginFlow");
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -138,7 +138,7 @@ app.get("/auth/redirect", async (req, res) => {
       code: req.query.code,
       scopes: authCodeUrlParameters.scopes,
       redirectUri,
-        nonce: attempt.nonce,
+      nonce: attempt.nonce,
     });
 
     if (tokenResponse.idTokenClaims?.nonce !== attempt.nonce || !tokenResponse.account?.username) {
@@ -381,7 +381,10 @@ app.get(
       const summary =
         await getTeamFeePayCollectionSummary();
 
-      res.json(summary);
+      const canViewDetails = namedUserAllowed(
+        process.env.TRUDASH_FINANCE_ADMIN_EMAILS, req.session.user.username
+      );
+      res.json(collectionResponse(summary, canViewDetails));
     } catch (error) {
       console.error(
         "Unable to retrieve TeamFeePay collection summary:",
