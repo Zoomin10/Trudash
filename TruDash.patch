@@ -1,213 +1,140 @@
-diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
-index 0fba448..0bc2054 100644
---- a/frontend/src/App.jsx
-+++ b/frontend/src/App.jsx
-@@ -3,6 +3,7 @@ import "./App.css";
- import DocumentRegister from "./components/DocumentRegister";
- import MembershipPilot from "./components/MembershipPilot";
- import ClubVolunteers from "./components/ClubVolunteers";
-+import SocialMedia from "./components/SocialMedia";
- import {
-   Scale,
-   Users,
-@@ -504,6 +505,12 @@ if (!auth.authenticated) {
-           </button>
-         ))}
+diff --git a/frontend/src/components/MembershipPilot.jsx b/frontend/src/components/MembershipPilot.jsx
+index b70c3c5..d2f4363 100644
+--- a/frontend/src/components/MembershipPilot.jsx
++++ b/frontend/src/components/MembershipPilot.jsx
+@@ -24,6 +24,7 @@ export default function MembershipPilot({ registrationUrl }) {
+   const [loaded, setLoaded] = useState(false);
+   const [loading, setLoading] = useState(false);
+   const [exporting, setExporting] = useState(false);
++  const [canExportFullCsv, setCanExportFullCsv] = useState(false);
+   const [error, setError] = useState("");
+   const [selected, setSelected] = useState(null);
+   const [filters, setFilters] = useState(emptyFilters);
+@@ -52,6 +53,7 @@ export default function MembershipPilot({ registrationUrl }) {
+       if (generation !== sessionGeneration.current || sequence !== requestNumber.current) return;
+       if (!Array.isArray(data.members)) throw new Error("Invalid members response");
+       setMembers(data.members); setLoaded(true);
++      setCanExportFullCsv(data.permissions?.fullCsvExport === true);
+       setSelected((current) => current ? data.members.find((member) => member.id === current.id) || null : null);
+     } catch (err) {
+       if (generation === sessionGeneration.current && sequence === requestNumber.current) setError(err.message);
+@@ -77,6 +79,7 @@ export default function MembershipPilot({ registrationUrl }) {
+     return () => { clearTimeout(timeout); events.forEach((event) => window.removeEventListener(event, reset)); };
+   }, [authenticated, logout]);
+   async function downloadCsv() {
++    if (!canExportFullCsv || !window.confirm("This full report includes medical declarations, allergies and personal contact details. Download only for an authorised purpose and store it securely. Continue?")) return;
+     setExporting(true); setError("");
+     try {
+       const response = await fetch(`${API_BASE}/registrations.csv`, { credentials: "include" });
+@@ -134,7 +137,7 @@ async function deleteMember(member) {
+   if (!authenticated) return <p role="status">Your Microsoft session expired. Redirecting to sign-in…</p>;
+   return <div className="admin-page membership-pilot">
+     <header className="admin-header"><div><p className="eyebrow">DEVELOPMENT FEATURE</p><strong>Membership pilot</strong></div><div className="header-actions"><Badge tone="blue">Stripe test pilot</Badge><a className="secondary-btn" href={registrationUrl} target="_blank" rel="noopener noreferrer">Public registration form</a></div></header>
+-    <div className="members-shell"><div className="page-heading"><div><p className="eyebrow">CLUB OPERATIONS</p><h1>Members</h1><p>Manage registrations, subscriptions and payment history.</p></div><div className="heading-actions"><button className="secondary-btn" disabled={loading} onClick={refreshMembers}>{loading ? "Refreshing…" : "Refresh members"}</button><button className="download-btn" onClick={downloadCsv} disabled={exporting}>{exporting ? "Exporting…" : "Export registrations"}</button></div></div>
++    <div className="members-shell"><div className="page-heading"><div><p className="eyebrow">CLUB OPERATIONS</p><h1>Members</h1><p>Manage registrations, subscriptions and payment history.</p></div><div className="heading-actions"><button className="secondary-btn" disabled={loading} onClick={refreshMembers}>{loading ? "Refreshing…" : "Refresh members"}</button>{canExportFullCsv && <button className="download-btn" onClick={downloadCsv} disabled={exporting}>{exporting ? "Exporting…" : "Full CSV (includes medical)"}</button>}</div></div>
+     {error && <p className="error" role="alert">{error}</p>}
+     <section className="stats-grid" aria-label="Club membership summary">
+       <Metric label="Total members" value={loaded ? members.length : "—"} note="All saved registrations" />
+@@ -185,7 +188,7 @@ function MemberPanel({ registration, onClose, onSessionExpired, onBillingChanged
+   const state = billing(registration);
+   return <div className="modal-backdrop" onClick={onClose}><div ref={panel} className="modal-card" role="dialog" aria-modal="true" aria-labelledby="member-panel-title" onClick={(event) => event.stopPropagation()}>
+     <div className="modal-header"><div><p className="eyebrow">MEMBER PROFILE</p><h2 id="member-panel-title">{name(registration)}</h2><p>{registration.wwfcTeam || "Team not recorded"} · {String(registration.ageGroup).toUpperCase()}</p><Badge tone={state.tone}>{state.label}</Badge></div><button ref={close} className="modal-close" aria-label="Close member details" onClick={onClose}>×</button></div>
+-    <div className="member-tabs profile-tabs">{[["payments", "Payments"], ["details", "Member details"], ["consent", "Consent & medical"]].map(([key, label]) => <button key={key} aria-pressed={tab === key} className={tab === key ? "is-active" : ""} onClick={() => setTab(key)}>{label}</button>)}</div>
++    <div className="member-tabs profile-tabs">{[["payments", "Payments"], ["details", "Member details"], ["consent", "Consent"]].map(([key, label]) => <button key={key} aria-pressed={tab === key} className={tab === key ? "is-active" : ""} onClick={() => setTab(key)}>{label}</button>)}</div>
+     <div hidden={tab !== "payments"}><PaymentHistory registration={registration} onSessionExpired={onSessionExpired} onBillingChanged={onBillingChanged} onInvoicesSynced={onInvoicesSynced} /></div>
+     {tab === "details" && <><ModalSection title="Player details"><Detail label="Team" value={registration.wwfcTeam} /><Detail label="Age group" value={String(registration.ageGroup).toUpperCase()} /><Detail label="Gender" value={registration.playerSex} /><Detail label="Date of birth" value={date(registration.playerDob)} /><Detail label="Registered" value={date(registration.createdAt)} /><Detail label="Registration reference" value={registration.id} /><Detail label="Email" value={registration.email} /><Detail label="Postcode" value={registration.postcode} /><Detail label="House number" value={registration.houseNumber} /></ModalSection>{[registration.emergencyContact1, registration.emergencyContact2].map((contact, index) => <ModalSection key={index} title={`Parent / emergency contact ${index + 1}`}><Detail label="Name" value={contact?.name} /><Detail label="Relationship" value={contact?.relationship} /><Detail label="Phone" value={contact?.phoneNumber} /><Detail label="Email" value={contact?.email} /><Detail label="Date of birth" value={date(contact?.dob)} /><Detail label="Postcode" value={contact?.postcode} /><Detail label="House number" value={contact?.houseNumber} /></ModalSection>)}
+         {(
+@@ -208,7 +211,7 @@ function MemberPanel({ registration, onClose, onSessionExpired, onBillingChanged
+     )}
+   </>
+ }
+-    {tab === "consent" && <><ModalSection title="Medical information"><Detail label="Medical information" value={registration.medicalInfo} wide /><Detail label="Allergies" value={registration.allergies} wide /></ModalSection><ModalSection title="Permissions"><Detail label="Contact consent" value={registration.consentData ? "Yes" : "No"} /><Detail label="Photo consent" value={registration.consentPhotos ? "Yes" : "No"} /><Detail label="Video consent" value={registration.consentVideos ? "Yes" : "No"} /><Detail label="Walk home alone" value={registration.consentWalkHome == null ? "Not applicable" : registration.consentWalkHome ? "Yes" : "No"} />{registration.acceptedPrivacyPolicy != null && <Detail label="Privacy policy accepted" value={registration.acceptedPrivacyPolicy ? "Yes" : "No"} />}</ModalSection><ModalSection title="Signature"><Detail label="Signed by" value={registration.parentName} /><Detail label="Signature" value={registration.parentSignature} /><Detail label="Signature date" value={date(registration.signatureDate)} /></ModalSection></>}
++    {tab === "consent" && <><ModalSection title="Permissions"><Detail label="Contact consent" value={registration.consentData ? "Yes" : "No"} /><Detail label="Photo consent" value={registration.consentPhotos ? "Yes" : "No"} /><Detail label="Video consent" value={registration.consentVideos ? "Yes" : "No"} /><Detail label="Walk home alone" value={registration.consentWalkHome == null ? "Not applicable" : registration.consentWalkHome ? "Yes" : "No"} />{registration.acceptedPrivacyPolicy != null && <Detail label="Privacy policy accepted" value={registration.acceptedPrivacyPolicy ? "Yes" : "No"} />}</ModalSection><ModalSection title="Signature"><Detail label="Signed by" value={registration.parentName} /><Detail label="Signature" value={registration.parentSignature} /><Detail label="Signature date" value={date(registration.signatureDate)} /></ModalSection></>}
+   </div></div>;
+ }
  
-+        {membershipPilot?.available && (
-+          <button className={`nav-item ${currentSection === "social-media" ? "active" : ""}`}
-+            onClick={() => { setCurrentSection("social-media"); setMobileMenuOpen(false); }}>
-+            Social Media
-+          </button>
-+        )}
-       </nav>
- <div className="sidebar-footer">
-   {auth.user && (
-@@ -557,6 +564,7 @@ if (!auth.authenticated) {
- </header>
- 
-       <main className="dashboard-content">
-+        {currentSection === "social-media" && membershipPilot?.available && <SocialMedia />}
-         {currentSection === "club-volunteers" && membershipPilot?.available && (
-           <ClubVolunteers registrationUrl={membershipPilot.registrationUrl} />
-         )}
-@@ -1670,6 +1678,7 @@ if (!auth.authenticated) {
-   currentSection !== "documentation" &&
-   currentSection !== "membership-pilot" &&
-   currentSection !== "club-volunteers" &&
-+  currentSection !== "social-media" &&
-   currentSection !== "members" &&
-     currentSection !== "safeguarding" &&  (
-             <>
-diff --git a/frontend/src/components/SocialMedia.css b/frontend/src/components/SocialMedia.css
-new file mode 100644
-index 0000000..3000131
---- /dev/null
-+++ b/frontend/src/components/SocialMedia.css
-@@ -0,0 +1,20 @@
-+.social-media .social-stats { grid-template-columns:repeat(4,minmax(0,1fr)); }
-+.social-media .social-muted { font-size:12px; color:var(--muted); line-height:1.6; }
-+.social-media .social-add-card { background:white; border:1px solid var(--line); border-radius:14px; padding:24px; margin:0 0 24px; }
-+.social-media .social-add-card h2 { font-size:18px; margin:0; }
-+.social-media .social-form-grid { display:grid; grid-template-columns:2fr 1fr; gap:14px; margin:18px 0; }
-+.social-media label { display:block; color:var(--muted); font-size:12px; font-weight:600; }
-+.social-media .social-toolbar { display:flex; align-items:flex-end; gap:18px; padding:20px 24px 10px; }
-+.social-media .social-toolbar label { flex:1; }
-+.social-media .social-summary-note { font-size:12px; color:var(--muted); padding:0 24px 10px; }
-+.social-media .social-post-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; padding:0 24px 24px; align-items:start; }
-+.social-media .social-post-card { border:1px solid var(--line); border-radius:12px; padding:18px; min-width:0; }
-+.social-media .social-post-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-+.social-media .social-post-card h3 { font-size:16px; margin:14px 0 5px; overflow-wrap:anywhere; }
-+.social-media .social-preview { width:100%; overflow:hidden; margin:16px 0; }
-+.social-media .social-preview iframe { border:0; max-width:100%; }
-+.social-media .social-preview .instagram-media { max-width:100% !important; min-width:0 !important; width:100% !important; }
-+.social-media .social-page-timeline { margin-top:24px; }
-+.social-media .social-page-timeline .social-preview { max-width:500px; }
-+@media(max-width:1000px) { .social-media .social-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-+@media(max-width:650px) { .social-media .social-post-grid, .social-media .social-form-grid { grid-template-columns:1fr; } .social-media .social-toolbar { align-items:stretch; flex-direction:column; } .social-media .social-post-grid { padding:0 16px 16px; } }
-diff --git a/frontend/src/components/SocialMedia.jsx b/frontend/src/components/SocialMedia.jsx
-new file mode 100644
-index 0000000..5e4e986
---- /dev/null
-+++ b/frontend/src/components/SocialMedia.jsx
-@@ -0,0 +1,114 @@
-+import { useEffect, useRef, useState } from "react";
-+import "./MembershipPilot.css";
-+import "./SocialMedia.css";
-+const FACEBOOK = "https://www.facebook.com/WroughtonYFC/";
-+const INSTAGRAM = "https://www.instagram.com/wroughtonyouthfc/";
-+const API = "/api/membership-pilot/social-posts";
-+let instagramScript;
-+function loadInstagram() {
-+  if (window.instgrm?.Embeds) return Promise.resolve();
-+  if (!instagramScript) instagramScript = new Promise((resolve, reject) => {
-+    const script = document.createElement("script");
-+    script.src = "https://www.instagram.com/embed.js"; script.async = true;
-+    script.onload = resolve;
-+    script.onerror = () => { instagramScript = null; script.remove(); reject(new Error("Preview unavailable")); };
-+    document.body.appendChild(script);
-+  });
-+  return instagramScript;
-+}
-+async function request(path = "", options = {}) {
-+  const response = await fetch(API + path, options);
-+  if (response.status === 401) { window.location.assign("/auth/login"); throw new Error("Please sign in again."); }
-+  const data = await response.json();
-+  if (!response.ok) throw new Error(data.error || "Request failed.");
-+  return data;
-+}
-+function MetaPreview({ url, platform, page = false }) {
-+  const container = useRef(null);
-+  const [width, setWidth] = useState(320);
-+  const [failed, setFailed] = useState(false);
-+  useEffect(() => {
-+    const element = container.current;
-+    const observer = new ResizeObserver(([entry]) => setWidth(Math.max(180, Math.min(500, Math.floor(entry.contentRect.width)))));
-+    observer.observe(element);
-+    return () => observer.disconnect();
-+  }, []);
-+  useEffect(() => {
-+    if (platform !== "INSTAGRAM") return;
-+    const element = container.current;
-+    let active = true;
-+    const quote = document.createElement("blockquote");
-+    quote.className = "instagram-media";
-+    quote.setAttribute("data-instgrm-permalink", url);
-+    quote.setAttribute("data-instgrm-version", "14");
-+    quote.setAttribute("data-instgrm-captioned", "");
-+    const link = document.createElement("a"); link.href = url; link.textContent = "View this post on Instagram";
-+    link.target = "_blank"; link.rel = "noopener noreferrer"; quote.appendChild(link);
-+    element.appendChild(quote);
-+    loadInstagram().then(() => { if (active) window.instgrm?.Embeds?.process(); }).catch(() => { if (active) setFailed(true); });
-+    return () => { active = false; element.replaceChildren(); };
-+  }, [url, platform]);
-+  const plugin = page ? "page" : url.includes("/reel/") ? "video" : "post";
-+  const params = new URLSearchParams({ href: url, width: String(width), height: "650", show_text: "true", ...(page ? { tabs: "timeline", small_header: "true", adapt_container_width: "true", hide_cover: "false", show_facepile: "false" } : {}) });
-+  return <><div ref={container} className="social-preview">{platform === "FACEBOOK" && <iframe title={page ? "Club Facebook timeline" : "Facebook post preview"} src={`https://www.facebook.com/plugins/${plugin}.php?${params}`} width={width} height="650" loading="lazy" allow="encrypted-media; picture-in-picture" />}</div>{failed && <p className="social-muted">Preview unavailable. Use the original post link below.</p>}</>;
-+}
-+function Metric({ label, value, note, tone = "blue" }) {
-+  return <div className={`member-metric metric-${tone}`}><span>{label}</span><strong>{value}</strong><small>{note}</small></div>;
-+}
-+export default function SocialMedia() {
-+  const [posts, setPosts] = useState(null), [error, setError] = useState(""), [loading, setLoading] = useState(true);
-+  const [tab, setTab] = useState("all"), [search, setSearch] = useState("");
-+  const [adding, setAdding] = useState(false), [saving, setSaving] = useState(false);
-+  const [url, setUrl] = useState(""), [title, setTitle] = useState("");
-+  const [previews, setPreviews] = useState(false);
-+  const sequence = useRef(0);
-+  const [summaryTime, setSummaryTime] = useState(() => Date.now());
-+  useEffect(() => {
-+    let active = true;
-+    request().then(data => { if (active) { setPosts(data.posts); setLoading(false); } }).catch(failure => { if (active) { setError(failure.message); setLoading(false); } });
-+    return () => { active = false; };
-+  }, []);
-+  async function refresh() {
-+    const current = ++sequence.current; setLoading(true); setError(""); setSummaryTime(Date.now());
-+    try { const data = await request(); if (current === sequence.current) setPosts(data.posts); }
-+    catch (failure) { if (current === sequence.current) setError(failure.message); }
-+    finally { if (current === sequence.current) setLoading(false); }
-+  }
-+  async function add(event) {
-+    event.preventDefault(); setSaving(true); setError("");
-+    try {
-+      const post = await request("", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url, title }) });
-+      setPosts(previous => [post, ...(previous || []).filter(item => item.id !== post.id)]);
-+      setAdding(false); setUrl(""); setTitle("");
-+    } catch (failure) { setError(failure.message); }
-+    finally { setSaving(false); }
-+  }
-+  async function remove(post) {
-+    if (!window.confirm("Remove this link from TruDash? The original social media post will remain.")) return;
-+    setSaving(true); setError("");
-+    try { await request(`/${post.id}`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: true }) }); setPosts(previous => previous.filter(item => item.id !== post.id)); }
-+    catch (failure) { setError(failure.message); }
-+    finally { setSaving(false); }
-+  }
-+  const list = posts || [];
-+  const counts = { all: list.length, FACEBOOK: list.filter(post => post.platform === "FACEBOOK").length, INSTAGRAM: list.filter(post => post.platform === "INSTAGRAM").length };
-+  const filtered = list.filter(post => (tab === "all" || post.platform === tab) && `${post.title} ${post.url}`.toLowerCase().includes(search.toLowerCase()));
-+  const recent = list.filter(post => summaryTime - new Date(post.createdAt).getTime() < 30 * 86400000).length;
-+  return <div className="admin-page membership-pilot social-media">
-+    <header className="admin-header"><div><p className="eyebrow">CLUB COMMUNICATIONS</p><strong>Social Media</strong></div><div className="header-actions"><a className="secondary-btn" href={FACEBOOK} target="_blank" rel="noopener noreferrer">Facebook ↗</a><a className="secondary-btn" href={INSTAGRAM} target="_blank" rel="noopener noreferrer">Instagram ↗</a></div></header>
-+    <main className="members-shell"><div className="page-heading"><div><p className="eyebrow">SOCIAL MEDIA HUB</p><h1>Club social media</h1><p>A shared collection of the club's public posts and reels.</p></div><div className="heading-actions"><button className="secondary-btn" disabled={loading || saving} onClick={refresh}>{loading ? "Refreshing…" : "Refresh"}</button><button className="download-btn" disabled={loading || saving} onClick={() => setAdding(!adding)}>{adding ? "Close form" : "+ Add post URL"}</button></div></div>
-+      <section className="stats-grid social-stats" aria-label="Saved post summary"><Metric label="Saved post links" value={posts ? counts.all : "—"} note="Curated in TruDash" /><Metric label="Facebook links" value={posts ? counts.FACEBOOK : "—"} note="Saved Facebook posts & reels" /><Metric label="Instagram links" value={posts ? counts.INSTAGRAM : "—"} note="Saved Instagram posts & reels" /><Metric label="Added in last 30 days" value={posts ? recent : "—"} note="Date added to TruDash" tone="green" /></section>
-+      {error && <p className="error" role="alert">{error}</p>}
-+      {adding && <form className="social-add-card" onSubmit={add}><h2>Add a public post</h2><p className="social-muted">Paste the post's full permalink, rather than the profile or a shortened share link. Please add only club content.</p><div className="social-form-grid"><label>Post URL<input type="url" required value={url} maxLength={2000} onChange={event => setUrl(event.target.value)} placeholder="https://www.instagram.com/p/…/" /></label><label>Title or label (optional)<input value={title} maxLength={150} onChange={event => setTitle(event.target.value)} placeholder="Team news, recruitment, club update…" /></label></div><button className="download-btn" disabled={saving || loading}>{saving ? "Saving…" : "Save post link"}</button></form>}
-+      <section className="admin-card"><div className="directory-heading"><div><h2>Public post collection</h2><p>Links are shared across authorised users. New posts are added manually.</p></div><span className="record-count">{filtered.length} links</span></div>
-+        <div className="member-tabs">{[["all", "All posts"], ["FACEBOOK", "Facebook"], ["INSTAGRAM", "Instagram"]].map(([key,label]) => <button key={key} aria-pressed={tab===key} className={tab===key?"is-active":""} onClick={()=>setTab(key)}>{label}<span>{counts[key]}</span></button>)}</div>
-+        <div className="social-toolbar"><label>Search posts<input value={search} onChange={event=>setSearch(event.target.value)} placeholder="Title or URL" /></label><button className="secondary-btn" onClick={()=>setPreviews(!previews)} aria-pressed={previews}>{previews ? "Hide previews" : "Load Facebook & Instagram previews"}</button></div>
-+        <p className="social-summary-note">These counts describe links saved in TruDash. Likes, comments, reach and follower totals are not connected.</p>
-+        {!posts && loading && <div className="empty-state" role="status"><p>Loading saved links…</p></div>}
-+        {posts && !filtered.length && <div className="empty-state"><strong>No matching saved posts</strong><p>{list.length ? "Try another filter or search." : "Add a public post URL to start the club's shared collection."}</p></div>}
-+        <div className="social-post-grid">{filtered.map(post=><article className="social-post-card" key={post.id}><div className="social-post-heading"><span className="member-badge badge-blue">{post.platform === "FACEBOOK" ? "Facebook" : "Instagram"}</span><button className="text-btn" disabled={saving} onClick={()=>remove(post)} aria-label={`Remove ${post.title || "post link"}`}>Remove link</button></div><h3>{post.title || "Club post"}</h3><p className="social-muted">Added {new Date(post.createdAt).toLocaleDateString("en-GB")}</p>{previews && <MetaPreview url={post.url} platform={post.platform} />}<a className="secondary-btn compact-btn" href={post.url} target="_blank" rel="noopener noreferrer">View original post ↗</a></article>)}</div>
-+      </section>
-+      {previews && <section className="social-page-timeline social-add-card"><h2>Club Facebook timeline</h2><p className="social-muted">A public Facebook preview. Availability depends on Facebook and your browser; it is separate from the saved links above.</p><MetaPreview url={FACEBOOK} platform="FACEBOOK" page /><a className="secondary-btn" href={FACEBOOK} target="_blank" rel="noopener noreferrer">Open the Facebook page ↗</a></section>}
-+    </main>
-+  </div>;
-+}
 diff --git a/routes/membershipPilot.js b/routes/membershipPilot.js
-index 1830eaf..a981e4d 100644
+index 9875e9f..3fe57bc 100644
 --- a/routes/membershipPilot.js
 +++ b/routes/membershipPilot.js
-@@ -21,7 +21,9 @@ function configuration(env) {
-   return { enabled, admins, backend, registrationUrl, secret, ready: Boolean(ready) };
+@@ -32,12 +32,13 @@ function permittedPath(method, path) {
+     (method === "POST" && /^\/registrations\/[A-Za-z0-9_-]+\/(invoices\/sync|billing\/cancel|payment-setup)$/.test(path)) ||
+     (method === "DELETE" && /^\/registrations\/[A-Za-z0-9_-]+$/.test(path));
  }
- function permittedPath(method, path) {
--  return (method === "GET" && path === "/volunteers") ||
-+  return (["GET", "POST"].includes(method) && path === "/social-posts") ||
-+    (method === "DELETE" && /^\/social-posts\/[A-Za-z0-9_-]+$/.test(path)) ||
-+    (method === "GET" && path === "/volunteers") ||
-     (method === "PATCH" && /^\/volunteers\/[A-Za-z0-9_-]+$/.test(path)) ||
-     (method === "POST" && /^\/volunteers\/[A-Za-z0-9_-]+\/acceptance-link$/.test(path)) ||
-     (method === "GET" && ["/members", "/registrations.csv"].includes(path)) ||
-@@ -78,7 +80,9 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } =
+-function signAssertion(secret, req, path, volunteerSuperAdmin = false) {
++function signAssertion(secret, req, path, volunteerSuperAdmin = false, fullCsvExport = false) {
+   const now = Math.floor(Date.now() / 1000);
+   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
+   const payload = Buffer.from(JSON.stringify({
+     iss: "trudash", aud: "tcm-membership-admin", sub: req.session.user.username.toLowerCase(),
+-    role: "membership_admin", volunteerSuperAdmin, iat: now, exp: now + 30, jti: crypto.randomUUID(),
++    role: "membership_admin", volunteerSuperAdmin,
++    fullCsvExport, iat: now, exp: now + 30, jti: crypto.randomUUID(),
+     method: req.method, path,
+     bodyHash: crypto.createHash("sha256").update(JSON.stringify(req.body || null)).digest("hex"),
+   })).toString("base64url");
+@@ -72,6 +73,10 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } =
        try { expectedOrigin = new URL(env.APP_BASE_URL).origin; } catch { return res.status(503).json({ error: "TruDash app URL is not configured" }); }
        if (req.get("origin") !== expectedOrigin) return res.status(403).json({ error: "Invalid request origin" });
      }
--    const upstreamPath = req.path.startsWith("/volunteers")
-+    const upstreamPath = req.path.startsWith("/social-posts")
-+      ? `/api/social-media/admin${req.path.slice("/social-posts".length)}`
-+      : req.path.startsWith("/volunteers")
-       ? `/api/volunteers/admin${req.path.slice("/volunteers".length)}`
-       : `/api/admin${req.path}`;
-     const superAdmins = (env.VOLUNTEER_SUPER_ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(e => e && !e.startsWith("@"));
++    const fullCsvExport = namedUserAllowed(env.TRUDASH_FULL_CSV_EXPORT_EMAILS, req.session.user.username);
++    if (req.path === "/registrations.csv" && !fullCsvExport) {
++      return res.status(403).json({ error: "Full registration export permission required" });
++    }
+     const upstreamPath = req.path.startsWith("/social-posts")
+       ? `/api/social-media/admin${req.path.slice("/social-posts".length)}`
+       : req.path.startsWith("/volunteers")
+@@ -82,7 +87,7 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } =
+     try {
+       const response = await fetchImpl(`${config.backend}${upstreamPath}`, {
+         method: req.method,
+-        headers: { "Content-Type": "application/json", "x-trudash-assertion": signAssertion(config.secret, req, upstreamPath, volunteerSuperAdmin) },
++        headers: { "Content-Type": "application/json", "x-trudash-assertion": signAssertion(config.secret, req, upstreamPath, volunteerSuperAdmin, fullCsvExport) },
+         ...(["GET", "HEAD"].includes(req.method) ? {} : { body: JSON.stringify(req.body || null) }),
+         signal: AbortSignal.timeout(30000), redirect: "error",
+       });
+diff --git a/tests/membershipAccess.test.cjs b/tests/membershipAccess.test.cjs
+new file mode 100644
+index 0000000..950ed98
+--- /dev/null
++++ b/tests/membershipAccess.test.cjs
+@@ -0,0 +1,39 @@
++const test = require('node:test');
++const assert = require('node:assert/strict');
++const express = require('express');
++const { createMembershipPilotRouter } = require('../routes/membershipPilot');
++async function scenario(t, admins, username, exportEmails = "") {
++ let calls = 0; let assertion;
++ const app = express(); app.use(express.json());
++ app.use((req,res,next) => { req.session = username ? {user:{username}} : {}; next(); });
++ app.use('/api/membership-pilot', createMembershipPilotRouter({env:{NODE_ENV:'production', MEMBERSHIP_PILOT_ENABLED:'true', MEMBERSHIP_PILOT_ADMIN_EMAILS:admins,TRUDASH_FULL_CSV_EXPORT_EMAILS:exportEmails,TCM_BACKEND_URL:'https://tcm.example',TCM_REGISTRATION_URL:'https://register.example',TRUDASH_MEMBERSHIP_SHARED_SECRET:'x'.repeat(40),APP_BASE_URL:'https://trudash.example'},fetchImpl:async(url,options)=>{assertion=options.headers["x-trudash-assertion"];calls++;return new Response(JSON.stringify({members:[]}),{headers:{'Content-Type':'application/json'}})}}));
++ const server = await new Promise(resolve => {const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
++ t.after(()=>new Promise(resolve=>server.close(resolve)));
++ return {url:`http://127.0.0.1:${server.address().port}/api/membership-pilot`,calls:()=>calls, assertion:()=>assertion};
++}
++test('domain wildcard never exposes directory or CSV or volunteer records',async t=>{
++ const s=await scenario(t,'@wwfc.org.uk','coach@wwfc.org.uk');
++ assert.equal((await (await fetch(s.url+'/config')).json()).available,false);
++ for(const path of ['/members','/registrations.csv','/volunteers'])assert.equal((await fetch(s.url+path)).status,403);
++ assert.equal(s.calls(),0);
++});
++test('named administrator can read while anonymous users cannot',async t=>{
++ const named=await scenario(t,'admin@wwfc.org.uk','admin@wwfc.org.uk');
++ const response=await fetch(named.url+'/members');assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');assert.equal(named.calls(),1);
++ const anonymous=await scenario(t,'admin@wwfc.org.uk',null);assert.equal((await fetch(anonymous.url+'/members')).status,401);assert.equal(anonymous.calls(),0);
++});
++test('cross-origin mutations are rejected before forwarding',async t=>{
++ const s=await scenario(t,'admin@wwfc.org.uk','admin@wwfc.org.uk');
++ assert.equal((await fetch(s.url+'/registrations/member1/billing/cancel',{method:'POST',headers:{Origin:'https://attacker.example'}})).status,403);assert.equal(s.calls(),0);
++});
++
++test('full CSV permission is separate from pilot administrator access and is signed',async t=>{
++ const denied=await scenario(t,'admin@wwfc.org.uk','admin@wwfc.org.uk');
++ assert.equal((await fetch(denied.url+'/registrations.csv')).status,403);assert.equal(denied.calls(),0);
++ const allowed=await scenario(t,'admin@wwfc.org.uk','admin@wwfc.org.uk','admin@wwfc.org.uk');
++ assert.equal((await fetch(allowed.url+'/registrations.csv')).status,200);
++ const claims=JSON.parse(Buffer.from(allowed.assertion().split('.')[1],'base64url').toString());
++ assert.equal(claims.fullCsvExport,true);assert.equal(claims.path,'/api/admin/registrations.csv');
++ const domain=await scenario(t,'admin@wwfc.org.uk','admin@wwfc.org.uk','@wwfc.org.uk');
++ assert.equal((await fetch(domain.url+'/registrations.csv')).status,403);assert.equal(domain.calls(),0);
++});

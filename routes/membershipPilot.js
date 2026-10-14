@@ -32,12 +32,13 @@ function permittedPath(method, path) {
     (method === "POST" && /^\/registrations\/[A-Za-z0-9_-]+\/(invoices\/sync|billing\/cancel|payment-setup)$/.test(path)) ||
     (method === "DELETE" && /^\/registrations\/[A-Za-z0-9_-]+$/.test(path));
 }
-function signAssertion(secret, req, path, volunteerSuperAdmin = false) {
+function signAssertion(secret, req, path, volunteerSuperAdmin = false, fullCsvExport = false) {
   const now = Math.floor(Date.now() / 1000);
   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
   const payload = Buffer.from(JSON.stringify({
     iss: "trudash", aud: "tcm-membership-admin", sub: req.session.user.username.toLowerCase(),
-    role: "membership_admin", volunteerSuperAdmin, iat: now, exp: now + 30, jti: crypto.randomUUID(),
+    role: "membership_admin", volunteerSuperAdmin,
+    fullCsvExport, iat: now, exp: now + 30, jti: crypto.randomUUID(),
     method: req.method, path,
     bodyHash: crypto.createHash("sha256").update(JSON.stringify(req.body || null)).digest("hex"),
   })).toString("base64url");
@@ -72,6 +73,10 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } = 
       try { expectedOrigin = new URL(env.APP_BASE_URL).origin; } catch { return res.status(503).json({ error: "TruDash app URL is not configured" }); }
       if (req.get("origin") !== expectedOrigin) return res.status(403).json({ error: "Invalid request origin" });
     }
+    const fullCsvExport = namedUserAllowed(env.TRUDASH_FULL_CSV_EXPORT_EMAILS, req.session.user.username);
+    if (req.path === "/registrations.csv" && !fullCsvExport) {
+      return res.status(403).json({ error: "Full registration export permission required" });
+    }
     const upstreamPath = req.path.startsWith("/social-posts")
       ? `/api/social-media/admin${req.path.slice("/social-posts".length)}`
       : req.path.startsWith("/volunteers")
@@ -82,7 +87,7 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } = 
     try {
       const response = await fetchImpl(`${config.backend}${upstreamPath}`, {
         method: req.method,
-        headers: { "Content-Type": "application/json", "x-trudash-assertion": signAssertion(config.secret, req, upstreamPath, volunteerSuperAdmin) },
+        headers: { "Content-Type": "application/json", "x-trudash-assertion": signAssertion(config.secret, req, upstreamPath, volunteerSuperAdmin, fullCsvExport) },
         ...(["GET", "HEAD"].includes(req.method) ? {} : { body: JSON.stringify(req.body || null) }),
         signal: AbortSignal.timeout(30000), redirect: "error",
       });
