@@ -30,11 +30,11 @@ function Detail({ label, children }) {
   return <div className="detail"><span>{label}</span><strong>{children || "Not recorded"}</strong></div>;
 }
 
-function VolunteerPanel({ volunteer, roles, superAdmin, onClose, onSaved }) {
+function VolunteerPanel({ volunteer, roles, permissionOptions, superAdmin, onClose, onSaved }) {
   const [tab, setTab] = useState("roles");
   const [form, setForm] = useState({
     assignedRoles: volunteer.assignedRoles, status: volunteer.status, notes: volunteer.notes,
-    accessRole: volunteer.accessRole, updatedAt: volunteer.updatedAt,
+    applicationPermissions: volunteer.applicationPermissions || [], accessRole: volunteer.accessRole, updatedAt: volunteer.updatedAt,
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -87,7 +87,7 @@ function VolunteerPanel({ volunteer, roles, superAdmin, onClose, onSaved }) {
     try { await navigator.clipboard.writeText(link); }
     catch { setError("Select the link below and copy it to share with the volunteer."); }
   }
-  const locked = volunteer.accessRole === "SUPER_ADMIN" && !superAdmin;
+  const locked = (volunteer.accessRole === "SUPER_ADMIN" || (volunteer.applicationPermissions || []).length > 0) && !superAdmin;
   const rolesChanged = [...form.assignedRoles].sort().join("|") !== [...volunteer.assignedRoles].sort().join("|");
 
   return <div className="modal-backdrop" onClick={onClose}>
@@ -111,9 +111,10 @@ function VolunteerPanel({ volunteer, roles, superAdmin, onClose, onSaved }) {
             </label>)}</div></section>
           <section className="modal-section"><h3>Review & administration</h3><div className="modal-grid volunteer-form-grid">
             <label>Review status<select disabled={locked || busy} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}><option value="AWAITING_REVIEW">Awaiting review</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></select></label>
-            <label>Volunteer administration access<select disabled={!superAdmin || busy} value={form.accessRole} onChange={(event) => setForm({ ...form, accessRole: event.target.value })}><option value="NONE">None</option><option value="ADMIN">Admin</option><option value="SUPER_ADMIN">Super Admin</option></select></label>
-          </div><p className="volunteer-hint">{superAdmin ? "Admin and Super Admin grant volunteer management access only. The volunteer must be Active with current agreements accepted. None grants no access." : "Only a Super Admin can grant administration access. Access requires Active status and current agreements."}</p>{locked && <p className="volunteer-hint">A Super Admin must update this volunteer's roles, status or notes.</p>}</section>
+            <label>Permission administration level<select disabled={!superAdmin || busy} value={form.accessRole} onChange={(event) => setForm({ ...form, accessRole: event.target.value })}><option value="NONE">Standard user</option><option value="ADMIN">Standard user (legacy Admin)</option><option value="SUPER_ADMIN">Super Admin</option></select></label>
+          </div><p className="volunteer-hint">{superAdmin ? "Super Admin can assign application permissions. Other access comes from the permissions selected below. Active status and current agreements are required." : "Only a Super Admin can grant administration access. Access requires Active status and current agreements."}</p>{locked && <p className="volunteer-hint">A Super Admin must update records that hold application permissions.</p>}</section>
         </div>
+        <section className="modal-section"><h3>Application permissions</h3><p className="volunteer-hint">These permissions are separate from club roles. Only a Super Admin can change them. Full CSV export also requires membership management.</p><div className="volunteer-role-grid">{permissionOptions.map(option => <label key={option.key}><input type="checkbox" disabled={!superAdmin || busy} checked={form.applicationPermissions.includes(option.key)} onChange={event => setForm({...form, applicationPermissions:event.target.checked ? [...form.applicationPermissions, option.key] : form.applicationPermissions.filter(key => key !== option.key)})} />{option.label}</label>)}</div></section>
         <div hidden={tab !== "details"}>
           <section className="modal-section"><h3>Contact details</h3><div className="modal-grid"><Detail label="Full name">{fullName(volunteer)}</Detail><Detail label="Email address">{volunteer.email}</Detail><Detail label="Telephone">{volunteer.phone}</Detail><Detail label="Team">{volunteer.team}</Detail><Detail label="Registered">{formatDate(volunteer.createdAt)}</Detail><Detail label="Registration reference">{volunteer.id}</Detail></div></section>
           <section className="modal-section"><h3>Internal notes</h3><label className="volunteer-form-label">Notes for club administrators<textarea rows={5} maxLength={4000} disabled={locked || busy} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label></section>
@@ -211,6 +212,6 @@ export default function ClubVolunteers({ registrationUrl }) {
         <div className="directory-footer"><span>{filtered.length ? `Showing ${(currentPage - 1) * 20 + 1}–${Math.min(currentPage * 20, filtered.length)} of ${filtered.length} volunteers` : "0 volunteers"}</span><div className="pagination"><button className="secondary-btn compact-btn" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>Previous</button><span>Page {currentPage} of {pages}</span><button className="secondary-btn compact-btn" disabled={currentPage >= pages} onClick={() => setPage(currentPage + 1)}>Next</button></div></div>
       </section>
     </main>
-    {selected && <VolunteerPanel key={selected.id} volunteer={selected} roles={data.roles} superAdmin={data.superAdmin} onClose={closePanel} onSaved={saved} />}
+    {selected && <VolunteerPanel key={selected.id} volunteer={selected} roles={data.roles} permissionOptions={data.permissionOptions || []} superAdmin={data.superAdmin} onClose={closePanel} onSaved={saved} />}
   </div>;
 }

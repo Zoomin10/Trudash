@@ -16,8 +16,9 @@ const {
   getTeamFeePayVolunteerSummary,
   inspectTeamFeePayAgreementReport,
 } = require("./services/sharepointService");
-const { namedUserAllowed, agreementAnalytics, complaintAnalytics, collectionResponse } = require("./services/privacyAccess");
+const { agreementAnalytics, complaintAnalytics, collectionResponse } = require("./services/privacyAccess");
 const { createLoginAttempt, consumeLoginAttempt } = require("./services/loginFlow");
+const { getApplicationAccess } = require("./services/applicationAccess");
 const app = express();
 const PORT = process.env.PORT || 3001;
 const {
@@ -381,9 +382,8 @@ app.get(
       const summary =
         await getTeamFeePayCollectionSummary();
 
-      const canViewDetails = namedUserAllowed(
-        process.env.TRUDASH_FINANCE_ADMIN_EMAILS, req.session.user.username
-      );
+      const access = await getApplicationAccess(req);
+      const canViewDetails = access.permissions.includes("FINANCE_DETAILS");
       res.json(collectionResponse(summary, canViewDetails));
     } catch (error) {
       console.error(
@@ -400,7 +400,10 @@ app.get(
 );
 
 app.get("/api/members/reports", requireAuth, async (req, res) => {
-  if (!namedUserAllowed(process.env.TRUDASH_REPORT_ADMIN_EMAILS, req.session.user.username)) {
+  let access;
+  try { access = await getApplicationAccess(req); }
+  catch { return res.status(503).json({error:"Application permissions could not be checked"}); }
+  if (!access.permissions.includes("SOURCE_REPORTS")) {
     return res.status(403).json({ error: "Source report administrator access required" });
   }
   try {
@@ -442,7 +445,8 @@ app.get(
   async (req, res) => {
     try {
       const summary = await getComplaintsSummary();
-      const permitted = namedUserAllowed(process.env.TRUDASH_WELFARE_ADMIN_EMAILS, req.session.user.username);
+      const access = await getApplicationAccess(req);
+      const permitted = access.permissions.includes("WELFARE_DETAILS");
       res.json(permitted ? summary : complaintAnalytics(summary));
     } catch (error) {
       console.error(
