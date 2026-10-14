@@ -593,7 +593,7 @@ if (!auth.authenticated) {
           <ClubVolunteers registrationUrl={membershipPilot.registrationUrl} />
         )}
         {currentSection === "membership-pilot" && membershipPilot?.available && (
-          <MembershipPilot registrationUrl={membershipPilot.registrationUrl} />
+          <MembershipPilot registrationUrl={membershipPilot.registrationUrl} canReviewRetention={membershipPilot.retentionReviewAvailable === true} />
         )}
 
 

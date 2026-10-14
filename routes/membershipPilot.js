@@ -25,7 +25,7 @@ function permittedPath(method, path) {
     (method === "GET" && path === "/volunteers") ||
     (method === "PATCH" && /^\/volunteers\/[A-Za-z0-9_-]+$/.test(path)) ||
     (method === "POST" && /^\/volunteers\/[A-Za-z0-9_-]+\/acceptance-link$/.test(path)) ||
-    (method === "GET" && ["/members", "/registrations.csv"].includes(path)) ||
+    (method === "GET" && ["/members", "/registrations.csv", "/retention-review"].includes(path)) ||
     (method === "GET" && /^\/registrations\/[A-Za-z0-9_-]+\/invoices$/.test(path)) ||
     (method === "POST" && /^\/registrations\/[A-Za-z0-9_-]+\/(invoices\/sync|billing\/cancel|payment-setup)$/.test(path)) ||
     (method === "DELETE" && /^\/registrations\/[A-Za-z0-9_-]+$/.test(path));
@@ -59,6 +59,7 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } = 
       const memberAllowed = access.permissions.includes("MEMBERS_MANAGE");
       const volunteersAvailable = access.permissions.includes("VOLUNTEERS_MANAGE");
       res.json({enabled:config.enabled,available:memberAllowed,volunteersAvailable,
+        retentionReviewAvailable:memberAllowed && access.superAdmin === true,
         registrationUrl:memberAllowed || volunteersAvailable ? config.registrationUrl : null});
     } catch { res.status(503).json({error:"Application permissions could not be checked"}); }
   });
@@ -74,6 +75,7 @@ function createMembershipPilotRouter({ env = process.env, fetchImpl = fetch } = 
     catch { return res.status(503).json({error:"Application permissions could not be checked"}); }
     const requiredPermission = isVolunteerPath ? "VOLUNTEERS_MANAGE" : "MEMBERS_MANAGE";
     if (!access.permissions.includes(requiredPermission)) return res.status(403).json({error:"Application permission required"});
+    if(req.path === "/retention-review" && access.superAdmin !== true)return res.status(403).json({error:"Super Admin access required"});
     if (!permittedPath(req.method, req.path) || req.url.includes("?")) return res.status(404).json({ error: "Unknown membership action" });
     if (!["GET", "HEAD"].includes(req.method)) {
       // Cookie-based Microsoft sessions must not authorize cross-site mutations.
