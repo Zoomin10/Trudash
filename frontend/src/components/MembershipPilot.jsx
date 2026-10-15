@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./MembershipPilot.css";
 import RetentionReview from "./RetentionReview";
+import SeasonManagement from "./SeasonManagement";
 
 const API_BASE = "/api/membership-pilot";
 const emptyFilters = { search: "", team: "", age: "", gender: "", plan: "", billing: "" };
@@ -20,6 +21,7 @@ function Badge({ children, tone = "neutral" }) { return <span className={`member
 function Metric({ label, value, note, tone }) { return <div className={`member-metric metric-${tone || "blue"}`}><span>{label}</span><strong>{value}</strong><small>{note}</small></div>; }
 
 export default function MembershipPilot({ registrationUrl, canReviewRetention = false }) {
+  const [showSeasons,setShowSeasons]=useState(false);
   const [showRetention, setShowRetention] = useState(false);
   const [authenticated, setAuthenticated] = useState(true);
   const [members, setMembers] = useState([]);
@@ -137,10 +139,11 @@ async function deleteMember(member) {
   const changeFilter = (key, value) => { setFilters((current) => ({ ...current, [key]: value })); setPage(1); };
   const totalOpen = members.reduce((total, member) => total + (member.invoiceSummary?.outstandingPence || 0), 0);
   if (!authenticated) return <p role="status">Your Microsoft session expired. Redirecting to sign-in…</p>;
+  if (showSeasons) return <SeasonManagement onBack={() => {setShowSeasons(false);refreshMembers();}} onSessionExpired={handleSessionExpired} />;
   if (showRetention && canReviewRetention) return <RetentionReview onBack={() => setShowRetention(false)} onSessionExpired={handleSessionExpired} />;
   return <div className="admin-page membership-pilot">
     <header className="admin-header"><div><p className="eyebrow">DEVELOPMENT FEATURE</p><strong>Membership pilot</strong></div><div className="header-actions"><Badge tone="blue">Stripe test pilot</Badge><a className="secondary-btn" href={registrationUrl} target="_blank" rel="noopener noreferrer">Public registration form</a></div></header>
-    <div className="members-shell"><div className="page-heading"><div><p className="eyebrow">CLUB OPERATIONS</p><h1>Members</h1><p>Manage registrations, subscriptions and payment history.</p></div><div className="heading-actions">{canReviewRetention && <button className="secondary-btn" onClick={() => setShowRetention(true)}>Season retention review</button>}<button className="secondary-btn" disabled={loading} onClick={refreshMembers}>{loading ? "Refreshing…" : "Refresh members"}</button>{canExportFullCsv && <button className="download-btn" onClick={downloadCsv} disabled={exporting}>{exporting ? "Exporting…" : "Full CSV (includes medical)"}</button>}</div></div>
+    <div className="members-shell"><div className="page-heading"><div><p className="eyebrow">CLUB OPERATIONS</p><h1>Members</h1><p>Manage registrations, subscriptions and payment history.</p></div><div className="heading-actions"><button className="secondary-btn" onClick={() => setShowSeasons(true)}>Seasons &amp; renewals</button>{canReviewRetention && <button className="secondary-btn" onClick={() => setShowRetention(true)}>Season retention review</button>}<button className="secondary-btn" disabled={loading} onClick={refreshMembers}>{loading ? "Refreshing…" : "Refresh members"}</button>{canExportFullCsv && <button className="download-btn" onClick={downloadCsv} disabled={exporting}>{exporting ? "Exporting…" : "Full CSV (includes medical)"}</button>}</div></div>
     {error && <p className="error" role="alert">{error}</p>}
     <section className="stats-grid" aria-label="Club membership summary">
       <Metric label="Total members" value={loaded ? members.length : "—"} note="All saved registrations" />
