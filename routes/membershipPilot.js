@@ -48,6 +48,7 @@ function configuration(env) {
   return { enabled, backend, registrationUrl, secret, ready: Boolean(ready) };
 }
 function permittedPath(method, path) {
+  if(method==="POST" && /^\/retention\/[A-Za-z0-9_-]+\/(archive|restore|hold|review)$/.test(path))return true;
   if (method === "POST" && /^\/season-admin\/memberships\/[A-Za-z0-9_-]+\/payment-setup$/.test(path)) return true;
   return (
     (["GET", "POST"].includes(method) && path === "/season-admin") ||
@@ -186,7 +187,7 @@ function createMembershipPilotRouter({
       : "MEMBERS_MANAGE";
     if (!access.permissions.includes(requiredPermission))
       return res.status(403).json({ error: "Application permission required" });
-    if (req.path === "/retention-review" && access.superAdmin !== true)
+    if ((req.path === "/retention-review" || req.path.startsWith("/retention/")) && access.superAdmin !== true)
       return res.status(403).json({ error: "Super Admin access required" });
     if (!permittedPath(req.method, req.path) || req.url.includes("?"))
       return res.status(404).json({ error: "Unknown membership action" });

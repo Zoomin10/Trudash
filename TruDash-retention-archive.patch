@@ -1,0 +1,558 @@
+diff --git a/RETENTION_ARCHIVE_UPDATE.md b/RETENTION_ARCHIVE_UPDATE.md
+new file mode 100644
+index 0000000..cf45544
+--- /dev/null
++++ b/RETENTION_ARCHIVE_UPDATE.md
+@@ -0,0 +1,78 @@
++# Reviewed retention and restricted archive — 15 October 2026
++
++This is an incremental update on top of the previously delivered season-memberships feature. It does not add bulk renewals. No Railway database, Stripe record or live service was changed while preparing it.
++
++## What changes
++
++- TruDash **Membership pilot → Retention & archive** replaces the earlier read-only, registration-date-based review. Access requires both Super Admin and MEMBERS_MANAGE, checked on TruDash and again on TCM.
++- The review uses confirmed seasonal memberships, including administrator-confirmed legacy memberships. Original registration dates remain labelled estimates only and cannot authorise an archive. Unaccepted offers and renewals cancelled before their season starts do not establish a later actual membership season.
++- Current members, accepted future renewals, mid-season leavers whose actual season has not ended, and members with open unpaid invoices cannot be archived. For your current test members in 2026 / 27, being marked Cancelled on an advanced Stripe clock does not make their real-world retention season end early. Stripe simulation time is not used as the app's retention calendar.
++- An eligible record is archived only after an administrator confirms non-renewal, records a general reason and chooses a justified future review date. The backend verifies that the Stripe customer has no active or future schedules/subscriptions; a released schedule with an ongoing subscription is insufficient. This action does not cancel billing or settle debts.
++- Archive flags, token invalidation and metadata audit are committed together. A failed audit rolls the action back. Archived members are excluded from the normal directory, registration JSON, dashboard, season-management list and regular CSV, including the full medical CSV. This changes the directory's total to mean non-archived registrations.
++- Archive review shows only limited identifying/season/retention metadata, not health declarations or contacts. Ordinary member managers cannot access an archived member's invoice API by guessing their ID. Super Admin invoice access remains permission-checked and is logged before release.
++- Holds may be set on active or archived records. They prevent the existing test-delete route from removing the record. Archive/restore preserve a hold; releasing it is a separate, reasoned and audited action. An archive is a restriction of use, so it is allowed while a hold preserves the data.
++- Restore returns the record to normal views but does not recreate tokens, renew membership, remove holds or restart payments. An administrator can record a continued-retention review with a new justified review date while the record remains archived. Overdue reviews are visibly flagged.
++- Permanent deletion is not provided in this workflow. The proposed twelve months is not silently adopted as policy and no review date authorises deletion. The old test-delete route is blocked for held/archived/season-history records. This is a technical retention control, not a declaration that the whole club is GDPR compliant.
++- Returning from retention or season management resets the member directory to All members and clears filters, addressing the earlier confusion about a member disappearing from the filtered view.
++
++## Apply in Development first
++
++1. The package contains changed files under `TotalClubManagement/` and `TruDash/`. Copy each folder's contents into the matching repository, preserving the paths and comparing any later local edits. Do not replace whole repositories. Alternatively use the included incremental patch per repository after `git apply --check`; do not both copy and apply a patch.
++2. Commit to the development branches. No new dependency, API key or routine Railway variable is required. Existing Microsoft/bridge/application permissions remain in use. Keep the current Stripe test-only restriction.
++3. Deploy the TCM backend first with Prisma generation and the normal migration deployment step. From `backend`, run `npx --no-install prisma migrate deploy` against the intended DEVELOPMENT database. The committed migration is `20261015080000_add_member_archive`; it adds six optional columns and MemberRetentionAudit. It does not archive, delete or backfill anyone. Do not run `migrate reset`.
++4. Deploy TruDash, sign in again if needed, and open **Membership pilot → Retention & archive**. There are no TCM public-frontend changes in this package. New archive guards affect both old and seasonal payment setup, so keep this backend version once using archives.
++5. Back up and verify the target database as part of your normal deployment procedure. Production rollout and policy approval remain separate steps. Database owners and backup operators can still access stored data; archive restrictions do not replace platform access controls.
++
++## Test normal controls with your existing test members
++
++- As a Super Admin with MEMBERS_MANAGE, open Retention & archive. Check known confirmed seasons are displayed, with no medical or contact details.
++- A 2026 / 27 member must remain ineligible until the real season end, even if you advanced their Stripe clock into July 2027. A member without an actual season confirmation must show Confirm actual season, not an inferred approval.
++- An accepted future season must block archive. A future offer alone is not accepted renewal, but its season does not qualify as historical membership evidence either.
++- Set a hold with a generic reason such as `Test case reference RET-001`. Verify ConsentForm.retentionHoldAt/reason and MemberRetentionAudit. Release it separately and verify another audit row. Do not put medical/complaint details into reason fields.
++- Sign in as a member manager who is not a Super Admin. The retention area and `/api/membership-pilot/retention-review` must be unavailable/403. POST `/api/membership-pilot/retention/<id>/archive`, `/restore`, `/hold`, and `/review` must also be refused. Accounts without member-management permission remain blocked altogether.
++
++## Test a successful archive now without altering real season dates
++
++A synthetic fixture script is included because your actual season has not ended. It creates one fake, previously ended membership and NO Stripe customer, payment, invoice or subscription. It never changes an existing member and refuses to reset its fixture if already present.
++
++Run it **locally from TCM/backend**, explicitly targeting your DEVELOPMENT database. Set local environment variables in PowerShell:
++
++```powershell
++$env:NODE_ENV = "development"
++$env:RETENTION_FIXTURE_ENVIRONMENT = "development"
++$env:RETENTION_FIXTURE_DATABASE_URL = "PASTE_THE_DEVELOPMENT_DATABASE_CONNECTION_URL_HERE"
++node scripts/seed-retention-fixture.cjs --confirm-development-fixture
++Remove-Item Env:RETENTION_FIXTURE_DATABASE_URL
++Remove-Item Env:RETENTION_FIXTURE_ENVIRONMENT
++```
++
++Use the development database's externally accessible connection URL for your local machine, not `postgres.railway.internal` and not the Production connection. Do not paste that secret into chat, Git or screenshots. The script's three-part opt-in is to prevent accidental execution; it cannot independently identify which Railway environment a supplied URL belongs to.
++
++Then:
++
++1. Find **Archive Test Fixture**, team **GDPR ARCHIVE TEST**, in the directory and retention review. Its fake season ended before today's real date. It should be eligible for Review archive.
++2. Set a hold and then choose Review archive. Enter a general reason, a future review date and explicitly confirm non-renewal. A hold should remain recorded after archiving.
++3. Confirm that it disappears from the normal directory, ordinary registrations endpoint, season list and CSV. It should remain under Archived in the Super Admin retention area. In Postgres, check the archive fields and MemberRetentionAudit action ARCHIVED. The actual record remains stored.
++4. As a non-Super member manager, request `/api/membership-pilot/registrations/gdpr-archive-development-fixture/invoices`. Expect 403. Try the old DELETE endpoint with confirmation: it must not remove an archived/held record, even for a Super Admin.
++5. Use Record review, provide a continued-retention justification and a new date. Confirm ARCHIVE_REVIEWED is logged without restoring the member.
++6. Restore with a reason. Confirm the member reappears, the hold remains, and no Stripe billing or renewal link is created. Check RESTORED in the audit. Release the hold explicitly if this test is complete.
++7. To exercise the due-review badge, use local automated tests with an injected future date. Do not change real registrations, database dates or a production server clock simply to make them eligible. Advancing Stripe alone intentionally cannot age retention records.
++
++## Validation and remaining decisions
++
++Local validation: 52 TCM tests (including the previous billing/renewal regression suite), 3 TruDash bridge tests, both frontend builds, Prisma format/validate/generate, and all 11 migrations applied in isolated embedded PostgreSQL. The fixture's refusal without explicit opt-in was checked; it has not been run against your database. Live Railway/Stripe behaviour still needs your Development verification.
++
++Run from each repository root:
++
++```
++# TCM, after installing backend dependencies
++node --test tests/*.cjs
++npm --prefix frontend run build
++# TruDash
++node --test tests/season-proxy.cjs
++npm --prefix frontend run build
++```
++
++The club still needs approved category-specific retention periods, review ownership/frequency, hold-release authority, backup expiry/restore handling and a justified deletion/redaction process. Children’s medical declarations, membership evidence, financial invoices and safeguarding/legal cases should not all be assigned a blanket twelve months. This update preserves existing financial and health data rather than pretending that restricted archiving is deletion. Historical records with no confirmed membership season require further supervised confirmation before they can enter this workflow.
++
++Other outstanding compliance work remains separate: confirm published notices and lawful bases, evidence of health-data consent across all enabled form paths, DPIA screening, processing records, supplier terms/transfers, M365/Railway security and backup checks, and tested subject-rights/breach procedures. Audit/log retention itself also needs an approved schedule. The changes do not certify legal compliance or inspect your deployed platform settings.
+diff --git a/SEASON_MEMBERSHIPS.md b/SEASON_MEMBERSHIPS.md
+index 5785972..ff396c1 100644
+--- a/SEASON_MEMBERSHIPS.md
++++ b/SEASON_MEMBERSHIPS.md
+@@ -66,7 +66,7 @@ The package was checked with 27 local automated tests, both frontend builds, Pri
+ ## Limits and handling
+ 
+ - Accepted renewals after the first-payment date, including delayed card setup, require club review. The app refuses to backdate or take an unannounced immediate payment. It does not silently change the agreed date.
+-- The existing retention-review report still infers seasons from original registration dates. It now explicitly directs you to confirmed season records. It does not incorporate renewals/departures yet, archive records or delete anything. Automatic archiving and separate holds/retention decisions remain future work.
++- The subsequent retention/archive update supersedes the original read-only report. See RETENTION_ARCHIVE_UPDATE.md for confirmed-season review, supervised restricted archives, holds and restore. There is still no automatic archiving or permanent deletion; policy periods and separate financial/safeguarding rules require approval.
+ - New season memberships are protected from the old test-member deletion button by a server check and restrictive database relationships. Use departure, not deletion, for these records.
+ - Private renewal URLs are bearer credentials and reveal limited member/contact details to their holder. Store/share them securely and avoid including full URLs in logs or analytics. Tokens are hashed in the database and consumed after payment setup; no third-party scripts were added to the page. The public endpoint has a small in-process rate cap; production infrastructure-level abuse controls are separate work.
+ - Leaving preserves invoices and may leave previously failed invoices open. Review arrears separately, including any Stripe retry settings. No refund or automatic debt write-off is performed.
+diff --git a/frontend/src/components/MembershipPilot.jsx b/frontend/src/components/MembershipPilot.jsx
+index 86ba503..b60bdb3 100644
+--- a/frontend/src/components/MembershipPilot.jsx
++++ b/frontend/src/components/MembershipPilot.jsx
+@@ -139,11 +139,11 @@ async function deleteMember(member) {
+   const changeFilter = (key, value) => { setFilters((current) => ({ ...current, [key]: value })); setPage(1); };
+   const totalOpen = members.reduce((total, member) => total + (member.invoiceSummary?.outstandingPence || 0), 0);
+   if (!authenticated) return <p role="status">Your Microsoft session expired. Redirecting to sign-in…</p>;
+-  if (showSeasons) return <SeasonManagement onBack={() => {setShowSeasons(false);refreshMembers();}} onSessionExpired={handleSessionExpired} />;
+-  if (showRetention && canReviewRetention) return <RetentionReview onBack={() => setShowRetention(false)} onSessionExpired={handleSessionExpired} />;
++  if (showSeasons) return <SeasonManagement onBack={() => {setShowSeasons(false);setFilters(emptyFilters);setTab("all");setPage(1);refreshMembers();}} onSessionExpired={handleSessionExpired} />;
++  if (showRetention && canReviewRetention) return <RetentionReview onBack={() => {setShowRetention(false);setFilters(emptyFilters);setTab("all");setPage(1);setMembers([]);setLoaded(false);refreshMembers();}} onSessionExpired={handleSessionExpired} />;
+   return <div className="admin-page membership-pilot">
+     <header className="admin-header"><div><p className="eyebrow">DEVELOPMENT FEATURE</p><strong>Membership pilot</strong></div><div className="header-actions"><Badge tone="blue">Stripe test pilot</Badge><a className="secondary-btn" href={registrationUrl} target="_blank" rel="noopener noreferrer">Public registration form</a></div></header>
+-    <div className="members-shell"><div className="page-heading"><div><p className="eyebrow">CLUB OPERATIONS</p><h1>Members</h1><p>Manage registrations, subscriptions and payment history.</p></div><div className="heading-actions"><button className="secondary-btn" onClick={() => setShowSeasons(true)}>Seasons &amp; renewals</button>{canReviewRetention && <button className="secondary-btn" onClick={() => setShowRetention(true)}>Season retention review</button>}<button className="secondary-btn" disabled={loading} onClick={refreshMembers}>{loading ? "Refreshing…" : "Refresh members"}</button>{canExportFullCsv && <button className="download-btn" onClick={downloadCsv} disabled={exporting}>{exporting ? "Exporting…" : "Full CSV (includes medical)"}</button>}</div></div>
++    <div className="members-shell"><div className="page-heading"><div><p className="eyebrow">CLUB OPERATIONS</p><h1>Members</h1><p>Manage registrations, subscriptions and payment history.</p></div><div className="heading-actions"><button className="secondary-btn" onClick={() => setShowSeasons(true)}>Seasons &amp; renewals</button>{canReviewRetention && <button className="secondary-btn" onClick={() => setShowRetention(true)}>Retention &amp; archive</button>}<button className="secondary-btn" disabled={loading} onClick={refreshMembers}>{loading ? "Refreshing…" : "Refresh members"}</button>{canExportFullCsv && <button className="download-btn" onClick={downloadCsv} disabled={exporting}>{exporting ? "Exporting…" : "Full CSV (includes medical)"}</button>}</div></div>
+     {error && <p className="error" role="alert">{error}</p>}
+     <section className="stats-grid" aria-label="Club membership summary">
+       <Metric label="Total members" value={loaded ? members.length : "—"} note="All saved registrations" />
+diff --git a/frontend/src/components/RetentionReview.jsx b/frontend/src/components/RetentionReview.jsx
+index a01255b..696faff 100644
+--- a/frontend/src/components/RetentionReview.jsx
++++ b/frontend/src/components/RetentionReview.jsx
+@@ -1,28 +1,380 @@
+-import {useCallback,useEffect,useState} from 'react';
+-import './MembershipPilot.css';
+-const labels={CURRENT_INFERRED_SEASON:'Current inferred season',REVIEW_RENEWAL:'Confirm renewal or departure',REVIEW_OLD_REGISTRATION:'Older registration needs review',CHECK_REGISTRATION_DATE:'Check registration date'};
+-const date=value=>value?new Date(value.length===10?`${value}T12:00:00Z`:value).toLocaleDateString('en-GB',{timeZone:'Europe/London'}):'—';
+-export default function RetentionReview({onBack,onSessionExpired}){
+- const [data,setData]=useState(null);const [error,setError]=useState('');const [loading,setLoading]=useState(true);
+- const [filter,setFilter]=useState('');const [search,setSearch]=useState('');
+- const refresh=useCallback(async(signal)=>{
+-  setLoading(true);setError('');
+-  try{
+-   const response=await fetch('/api/membership-pilot/retention-review',{credentials:'include',signal});
+-   if(response.status===401){onSessionExpired();return;}
+-   const result=await response.json();if(!response.ok)throw Error(result.error||'Review could not be loaded');
+-   if(!signal?.aborted)setData(result);
+-  }catch(e){if(e.name!=='AbortError')setError(e.message);}finally{if(!signal?.aborted)setLoading(false);}
+- },[onSessionExpired]);
+- useEffect(()=>{const controller=new AbortController();refresh(controller.signal);return()=>controller.abort();},[refresh]);
+- const rows=(data?.members||[]).filter(member=>(!filter||member.state===filter)&&`${member.playerFirstName} ${member.playerSurname} ${member.team||''}`.toLowerCase().includes(search.toLowerCase()));
+- return <div className="admin-page membership-pilot"><div className="members-shell">
+-  <div className="page-heading"><div><p className="eyebrow">SEASON RECORD REVIEW</p><h1>Retention review</h1><p>Season ends 31 May · Proposed restricted archive period 12 months</p></div><div className="heading-actions"><button className="secondary-btn" onClick={onBack}>Back to members</button><button className="secondary-btn" disabled={loading} onClick={()=>refresh()}>{loading?'Loading…':'Refresh report'}</button></div></div>
+-  <section className="detail"><strong>Review only — no records are archived or deleted</strong><p>{data?.notice||'Registration dates do not confirm a membership season, renewal or departure. Confirm those facts before a retention decision.'}</p><p>Keep financial, agreement, incident and safeguarding records under their separate rules. Check billing and holds separately. Medical declarations are excluded from this report.</p></section>
+-  {error&&<p className="error" role="alert">{error}</p>}
+-  {data&&<><section className="stats-grid"><div className="stat"><span>Registrations</span><strong>{data.counts.total}</strong></div><div className="stat"><span>Renewal or departure review</span><strong>{data.counts.reviewRenewal}</strong></div><div className="stat"><span>Older registrations to review</span><strong>{data.counts.reviewOldRegistration}</strong></div></section>
+-  <div className="admin-actions"><label>Find member or team<input value={search} onChange={e=>setSearch(e.target.value)} /></label><label>Review state<select value={filter} onChange={e=>setFilter(e.target.value)}><option value="">All records</option>{Object.entries(labels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label></div>
+-  <p>Generated {date(data.generatedAt)} · Dates use Europe/London · {rows.length} records shown</p>
+-  <div className="table-wrap"><table className="members-table"><thead><tr><th>Member</th><th>Team</th><th>Registered</th><th>Inferred season</th><th>Review state</th><th>Proposed archive review date</th><th>Separate checks</th></tr></thead><tbody>{rows.map(member=><tr key={member.id}><td>{member.playerFirstName} {member.playerSurname}</td><td>{member.team||'—'}</td><td>{date(member.registeredAt)}</td><td>{member.inferredSeason||'—'}<small style={{display:'block'}}>Registration date only</small></td><td>{labels[member.state]}</td><td>{date(member.proposedArchiveReviewDate)}<small style={{display:'block'}}>Proposal, not deletion approval</small></td><td>{member.billingReviewRequired?'Review Stripe billing. ':''}{member.openInvoiceCount?`${member.openInvoiceCount} open invoices. `:''}Confirm renewals and holds.</td></tr>)}</tbody></table>{!rows.length&&<p>No matching registrations.</p>}</div></>}
+- </div></div>;
++import { useCallback, useEffect, useState } from "react";
++import "./MembershipPilot.css";
++const labels = {
++  ARCHIVED: "Archived",
++  CONFIRM_SEASON: "Confirm actual season",
++  CURRENT_OR_RENEWED: "Current or renewed",
++  RETAIN_TO_SEASON_END: "Retain until season end",
++  REVIEW_ARCHIVE: "Review for archive",
++};
++const date = (v) =>
++  v
++    ? new Date(v.length === 10 ? `${v}T12:00:00Z` : v).toLocaleDateString(
++        "en-GB",
++        { timeZone: "Europe/London" },
++      )
++    : "—";
++export default function RetentionReview({ onBack, onSessionExpired }) {
++  const [data, setData] = useState(null),
++    [error, setError] = useState(""),
++    [loading, setLoading] = useState(false),
++    [filter, setFilter] = useState(""),
++    [search, setSearch] = useState(""),
++    [action, setAction] = useState(null),
++    [reason, setReason] = useState(""),
++    [reviewDate, setReviewDate] = useState(""),
++    [confirm, setConfirm] = useState(false),
++    [notice, setNotice] = useState("");
++  const refresh = useCallback(
++    async (signal) => {
++      setLoading(true);
++      try {
++        const r = await fetch("/api/membership-pilot/retention-review", {
++          credentials: "include",
++          signal,
++        });
++        if (r.status === 401) {
++          onSessionExpired();
++          return;
++        }
++        const d = await r.json();
++        if (!r.ok) throw Error(d.error);
++        if (!signal?.aborted) setData(d);
++      } catch (e) {
++        if (e.name !== "AbortError") setError(e.message);
++      } finally {
++        if (!signal?.aborted) setLoading(false);
++      }
++    },
++    [onSessionExpired],
++  );
++  useEffect(() => {
++    const c = new AbortController();
++    refresh(c.signal);
++    return () => c.abort();
++  }, [refresh]);
++  function begin(member, kind) {
++    setAction({ member, kind });
++    setReason("");
++    setReviewDate("");
++    setConfirm(false);
++    setError("");
++    setNotice("");
++  }
++  async function submit(e) {
++    e.preventDefault();
++    setLoading(true);
++    setError("");
++    try {
++      const body = {
++        confirm,
++        reason,
++        ...(action.kind === "archive" || action.kind === "review"
++          ? {
++              reviewDate,
++              ...(action.kind === "archive"
++                ? { nonRenewalConfirmed: confirm }
++                : {}),
++            }
++          : {}),
++        ...(action.kind === "hold"
++          ? { enabled: !action.member.retentionHold }
++          : {}),
++      };
++      const r = await fetch(
++        `/api/membership-pilot/retention/${action.member.id}/${action.kind}`,
++        {
++          method: "POST",
++          credentials: "include",
++          headers: { "Content-Type": "application/json" },
++          body: JSON.stringify(body),
++        },
++      );
++      if (r.status === 401) {
++        onSessionExpired();
++        return;
++      }
++      const d = await r.json();
++      if (!r.ok) throw Error(d.error);
++      setAction(null);
++      setNotice(
++        action.kind === "restore"
++          ? "Record restored; billing and renewal links remain stopped."
++          : "Retention action recorded.",
++      );
++      await refresh();
++    } catch (e) {
++      setError(e.message);
++    } finally {
++      setLoading(false);
++    }
++  }
++  const rows = (data?.members || []).filter(
++    (m) =>
++      (!filter || m.state === filter) &&
++      `${m.playerFirstName} ${m.playerSurname} ${m.team || ""}`
++        .toLowerCase()
++        .includes(search.toLowerCase()),
++  );
++  return (
++    <div className="admin-page membership-pilot">
++      <div className="members-shell">
++        <div className="page-heading">
++          <div>
++            <p className="eyebrow">SUPERVISED DATA RETENTION</p>
++            <h1>Retention &amp; archive</h1>
++            <p>
++              Confirmed seasons · Restricted archive · No permanent deletion
++            </p>
++          </div>
++          <div className="heading-actions">
++            <button className="secondary-btn" onClick={onBack}>
++              Back to members
++            </button>
++            <button
++              className="secondary-btn"
++              disabled={loading}
++              onClick={() => {
++                setError("");
++                refresh();
++              }}
++            >
++              Refresh review
++            </button>
++          </div>
++        </div>
++        <section className="detail">
++          <strong>Archive review dates do not authorise deletion</strong>
++          <p>{data?.notice}</p>
++          <p>
++            Only Super Admins with member-management permission may use this
++            area. Medical declarations and contact details are not displayed.
++            Retention holds preserve records for a documented purpose; record
++            only a general reason or case reference, never sensitive case
++            details.
++          </p>
++        </section>
++        {error && <p role="alert">{error}</p>}
++        {notice && <p role="status">{notice}</p>}
++        {data && (
++          <>
++            <div className="stats-grid">
++              {[
++                ["Records", data.counts.total],
++                ["Archive candidates", data.counts.archiveCandidates],
++                ["Archived", data.counts.archived],
++                ["Reviews due", data.counts.reviewDue],
++                ["Holds", data.counts.holds],
++              ].map(([label, value]) => (
++                <div className="stat" key={label}>
++                  <span>{label}</span>
++                  <strong>{value}</strong>
++                </div>
++              ))}
++            </div>
++            <div className="admin-actions">
++              <label>
++                Search member or team
++                <input
++                  value={search}
++                  onChange={(e) => setSearch(e.target.value)}
++                />
++              </label>
++              <label>
++                Review state
++                <select
++                  value={filter}
++                  onChange={(e) => setFilter(e.target.value)}
++                >
++                  <option value="">All records (including archive)</option>
++                  {Object.entries(labels).map(([key, label]) => (
++                    <option key={key} value={key}>
++                      {label}
++                    </option>
++                  ))}
++                </select>
++              </label>
++            </div>
++            {action && (
++              <section className="admin-card" style={{ marginBottom: 20 }}>
++                <h2>
++                  {action.kind === "archive"
++                    ? "Archive"
++                    : action.kind === "restore"
++                      ? "Restore"
++                      : action.kind === "review"
++                        ? "Review continued retention"
++                        : action.member.retentionHold
++                          ? "Release retention hold"
++                          : "Set retention hold"}{" "}
++                  — {action.member.playerFirstName}{" "}
++                  {action.member.playerSurname}
++                </h2>
++                <form onSubmit={submit}>
++                  <label>
++                    General reason / reference (no health or complaint details)
++                    <textarea
++                      required
++                      minLength={10}
++                      maxLength={300}
++                      value={reason}
++                      onChange={(e) => setReason(e.target.value)}
++                    />
++                  </label>
++                  {(action.kind === "archive" || action.kind === "review") && (
++                    <>
++                      <label>
++                        Next archive review date
++                        <input
++                          type="date"
++                          required
++                          value={reviewDate}
++                          onChange={(e) => setReviewDate(e.target.value)}
++                        />
++                      </label>
++                      <p>
++                        Select a justified review date under the club's approved
++                        procedure. The proposed 12 months is not automatically
++                        applied. Stripe will be checked before archiving; active
++                        plans or open invoices block the action.
++                      </p>
++                    </>
++                  )}
++                  <label>
++                    <input
++                      type="checkbox"
++                      required
++                      checked={confirm}
++                      onChange={(e) => setConfirm(e.target.checked)}
++                    />
++                    {action.kind === "archive"
++                      ? " I confirm this member is not continuing or renewing, their confirmed season has ended, and this archive/review date is appropriate."
++                      : " I confirm this retention action and its stated reason."}
++                  </label>
++                  <div className="heading-actions">
++                    <button className="secondary-btn" disabled={loading}>
++                      Confirm {action.kind}
++                    </button>
++                    <button
++                      type="button"
++                      className="secondary-btn"
++                      disabled={loading}
++                      onClick={() => setAction(null)}
++                    >
++                      Cancel
++                    </button>
++                  </div>
++                </form>
++              </section>
++            )}
++            <p>{rows.length} records shown · Dates use Europe/London</p>
++            <div className="table-wrap">
++              <table className="members-table">
++                <thead>
++                  <tr>
++                    <th>Member</th>
++                    <th>Season</th>
++                    <th>Review</th>
++                    <th>Hold</th>
++                    <th>Archive</th>
++                    <th>Actions</th>
++                  </tr>
++                </thead>
++                <tbody>
++                  {rows.map((m) => (
++                    <tr key={m.id}>
++                      <td>
++                        {m.playerFirstName} {m.playerSurname}
++                        <small className="cell-subtitle">
++                          {m.team || "No team"}
++                        </small>
++                      </td>
++                      <td>
++                        {m.confirmedSeason || "Not confirmed"}
++                        <small className="cell-subtitle">
++                          {m.confirmedSeason
++                            ? `Season ends ${date(m.seasonEnd)}`
++                            : `Registration-date estimate: ${m.inferredSeason || "Unavailable"}`}
++                        </small>
++                      </td>
++                      <td>
++                        {labels[m.state]}
++                        {m.archiveBlockers.map((text) => (
++                          <small className="cell-subtitle" key={text}>
++                            {text}
++                          </small>
++                        ))}
++                        {m.billingReviewRequired && (
++                          <small className="cell-subtitle">
++                            Live Stripe check required before archive
++                          </small>
++                        )}
++                      </td>
++                      <td>
++                        {m.retentionHold ? "Hold active" : "No hold"}
++                        <small className="cell-subtitle">
++                          {m.retentionHoldReason}
++                        </small>
++                      </td>
++                      <td>
++                        {m.archivedAt
++                          ? `Archived ${date(m.archivedAt)}`
++                          : "Not archived"}
++                        {m.archiveReviewAt && (
++                          <small className="cell-subtitle">
++                            {m.archiveReviewDue ? "REVIEW DUE" : "Review"}{" "}
++                            {date(m.archiveReviewAt)}
++                          </small>
++                        )}
++                      </td>
++                      <td>
++                        <div
++                          style={{ display: "flex", gap: 6, flexWrap: "wrap" }}
++                        >
++                          {m.archivedAt ? (
++                            <>
++                              <button
++                                className="secondary-btn compact-btn"
++                                disabled={loading}
++                                onClick={() => begin(m, "restore")}
++                              >
++                                Restore
++                              </button>
++                              <button
++                                className="secondary-btn compact-btn"
++                                disabled={loading}
++                                onClick={() => begin(m, "review")}
++                              >
++                                Record review
++                              </button>
++                            </>
++                          ) : (
++                            <button
++                              className="secondary-btn compact-btn"
++                              disabled={loading || !m.archiveEligible}
++                              onClick={() => begin(m, "archive")}
++                            >
++                              Review archive
++                            </button>
++                          )}
++                          <button
++                            className="secondary-btn compact-btn"
++                            disabled={loading}
++                            onClick={() => begin(m, "hold")}
++                          >
++                            {m.retentionHold ? "Release hold" : "Set hold"}
++                          </button>
++                        </div>
++                      </td>
++                    </tr>
++                  ))}
++                </tbody>
++              </table>
++              {!rows.length && <p>No matching records.</p>}
++            </div>
++          </>
++        )}
++      </div>
++    </div>
++  );
+ }
+diff --git a/routes/membershipPilot.js b/routes/membershipPilot.js
+index 0d66ea4..d9b2e74 100644
+--- a/routes/membershipPilot.js
++++ b/routes/membershipPilot.js
+@@ -48,6 +48,7 @@ function configuration(env) {
+   return { enabled, backend, registrationUrl, secret, ready: Boolean(ready) };
+ }
+ function permittedPath(method, path) {
++  if(method==="POST" && /^\/retention\/[A-Za-z0-9_-]+\/(archive|restore|hold|review)$/.test(path))return true;
+   if (method === "POST" && /^\/season-admin\/memberships\/[A-Za-z0-9_-]+\/payment-setup$/.test(path)) return true;
+   return (
+     (["GET", "POST"].includes(method) && path === "/season-admin") ||
+@@ -186,7 +187,7 @@ function createMembershipPilotRouter({
+       : "MEMBERS_MANAGE";
+     if (!access.permissions.includes(requiredPermission))
+       return res.status(403).json({ error: "Application permission required" });
+-    if (req.path === "/retention-review" && access.superAdmin !== true)
++    if ((req.path === "/retention-review" || req.path.startsWith("/retention/")) && access.superAdmin !== true)
+       return res.status(403).json({ error: "Super Admin access required" });
+     if (!permittedPath(req.method, req.path) || req.url.includes("?"))
+       return res.status(404).json({ error: "Unknown membership action" });
+diff --git a/tests/season-proxy.cjs b/tests/season-proxy.cjs
+index 1ddf2cc..336dd31 100644
+--- a/tests/season-proxy.cjs
++++ b/tests/season-proxy.cjs
+@@ -47,3 +47,4 @@ test("season assertion binds exact backend path, method and confirmation", () =>
+     crypto.createHash("sha256").update(JSON.stringify(body)).digest("hex"),
+   );
+ });
++test('retention bridge permits only explicit POST actions',()=>{for(const action of ['archive','restore','hold','review'])assert.equal(permittedPath('POST',`/retention/member/${action}`),true);for(const [method,path] of [['DELETE','/retention/member'],['GET','/retention/member/archive'],['POST','/retention/member/delete'],['POST','/retention/../archive']])assert.equal(permittedPath(method,path),false);});
